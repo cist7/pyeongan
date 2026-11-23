@@ -192,7 +192,7 @@ body.zen .top .crew, body.zen .seg, body.zen .bottom, body.zen .seatbar{transiti
         <button type="button" data-emo="sun" title="노을 최고">🌅</button>
       </div>
       <form id="chatForm" autocomplete="off">
-        <input id="chatInput" maxlength="80" placeholder="바닷바람에 한마디… (Enter)" aria-label="채팅 메시지">
+        <input id="chatInput" maxlength="80" placeholder="같은 층 사람들에게 한마디… (Enter)" aria-label="채팅 메시지">
         <button type="submit">보내기</button>
       </form>
     </div>
@@ -1509,7 +1509,11 @@ function onPeers(peers){
       const fresh = r.sayT !== null || Math.abs(Date.now() - num(say.t, 0)) < 45000;
       r.sayT = say.t;
       const m = say.m.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 80);
-      if (fresh && m) { r.av.say(m); addLog({ name: look.n, color: look.c, text: m }); }
+      // chat is heard only on your own deck; from other decks you just see that someone is talking
+      if (fresh && m) {
+        if (floorOf(r.l, r.tz ?? r.z) === floorOf(me.l, me.z)) { r.av.say(m); addLog({ name: look.n, color: look.c, text: m }); }
+        else r.av.say('아무말 중...');
+      }
     }
     const emo = pr.emo;
     if (emo && typeof emo.e === 'string' && emo.t !== r.emoT) {
@@ -1540,6 +1544,12 @@ function updateRemotes(dt){
     }
     r.av.root.position.set(x, y, z); r.av.root.rotation.y = ry;
   }
+}
+// which deck someone counts as being on (people on a staircase count as the deck they are closer to)
+function floorOf(l, z){
+  if (l === 2) return stairY(z) > (DECK_Y + UP_Y)/2 ? 1 : 0;
+  if (l === 4) return stair2Y(z) > (UP_Y + UP2_Y)/2 ? 3 : 1;
+  return l === 1 || l === 3 ? l : 0;
 }
 function crewCount(){ return remotes.size + (entered ? 1 : 0); }
 
