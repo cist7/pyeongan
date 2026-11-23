@@ -96,7 +96,7 @@ body.zen .top .crew, body.zen .seg, body.zen .bottom, body.zen .seatbar{transiti
 /* ---------- Entry ---------- */
 #entry{position:fixed;inset:0;display:grid;place-items:center;padding:calc(20px + var(--st)) max(16px,var(--sr)) calc(20px + var(--sb)) max(16px,var(--sl));background:linear-gradient(180deg,rgba(10,14,30,.05) 0%,rgba(10,14,30,.55) 100%);transition:opacity 1.2s ease}
 #entry.gone{opacity:0;pointer-events:none}
-.card{width:min(400px,100%);padding:26px 24px 22px;background:var(--glass-strong);display:grid;gap:12px;border-radius:20px;max-height:100%;overflow:auto}
+.card{width:min(720px,100%);padding:26px 24px 22px;background:var(--glass-strong);display:grid;gap:12px;border-radius:20px;max-height:100%;overflow:auto}
 .eyebrow{margin:0;font-size:12px;letter-spacing:.14em;color:var(--accent)}
 .card h1{margin:-4px 0 0;font-family:var(--f-display);font-weight:700;font-size:40px;letter-spacing:.04em;line-height:1.1;text-wrap:balance}
 .lede{margin:0;color:var(--ink-dim);line-height:1.6;font-size:13.5px}
@@ -117,6 +117,18 @@ body.zen .top .crew, body.zen .seg, body.zen .bottom, body.zen .seatbar{transiti
 .gender input:checked + span{background:var(--ink);color:#1b2234;border-color:transparent}
 .gender input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
 .reroll{border:0;background:transparent;color:var(--accent);font-size:12px;padding:0 0 0 8px}
+.entry-grid{display:grid;grid-template-columns:220px minmax(0,1fr);gap:18px;align-items:start}
+.preview-wrap{display:grid;gap:4px;justify-items:center;padding:8px;border-radius:16px;background:radial-gradient(circle at 50% 42%,rgba(242,179,111,.22),rgba(0,0,0,.18) 72%);position:sticky;top:0}
+#preview{width:100%;max-width:204px;aspect-ratio:1;display:block}
+.preview-name{margin:0 0 4px;font-size:13px;color:var(--ink-dim)}
+.fields{display:grid;gap:11px;min-width:0}
+.styles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.styles label{position:relative;cursor:pointer}
+.styles input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.styles span{display:block;text-align:center;padding:8px 2px;border-radius:9px;border:1px solid var(--line);background:rgba(0,0,0,.22);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.styles input:checked + span{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:600}
+.styles input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:640px){ .entry-grid{grid-template-columns:1fr;gap:10px} .preview-wrap{position:static} #preview{max-width:150px} .styles{grid-template-columns:repeat(3,minmax(0,1fr))} }
 .check{display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer}
 .check input{accent-color:var(--accent);width:16px;height:16px}
 .primary-btn{margin-top:4px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:16px;border-radius:12px;padding:13px;letter-spacing:.04em}
@@ -192,17 +204,27 @@ body.zen .top .crew, body.zen .seg, body.zen .bottom, body.zen .seatbar{transiti
   <form class="card" id="entryForm">
     <p class="eyebrow">바다 한가운데의 작은 쉼터</p>
     <h1>평안호</h1>
-    <p class="lede">파라솔 아래 선베드에 누워 수평선을 바라보세요. 잔잔한 피아노와 파도 소리가 함께합니다. 1층 14자리, 2층 선데크 6자리 — 최대 20명이 함께 승선할 수 있어요.</p>
-    <label class="field" for="nick"><span>가명 <button type="button" id="reroll" class="reroll" title="다른 가명 뽑기">↻ 다른 이름</button></span><input id="nick" maxlength="12" placeholder="갑판에서 불릴 가명" required></label>
-    <div class="field"><span>캐릭터</span>
-      <div class="gender" role="radiogroup" aria-label="캐릭터 성별">
-        <label for="g-m"><input type="radio" name="gender" id="g-m" value="m"><span>남자</span></label>
-        <label for="g-f"><input type="radio" name="gender" id="g-f" value="f"><span>여자</span></label>
+    <p class="lede">파라솔 아래 선베드에 누워 수평선을 바라보세요. 잔잔한 피아노와 파도 소리가 함께합니다. 1층 14자리, 2층 선데크 6자리, 3층 스카이데크 2자리 — 최대 22명이 함께 승선할 수 있어요.</p>
+    <div class="entry-grid">
+      <div class="preview-wrap">
+        <canvas id="preview" width="220" height="220" aria-label="내 캐릭터 미리보기"></canvas>
+        <p class="preview-name" id="previewName">미리보기</p>
+      </div>
+      <div class="fields">
+        <label class="field" for="nick"><span>가명 <button type="button" id="reroll" class="reroll" title="다른 가명 뽑기">↻ 다른 이름</button></span><input id="nick" maxlength="12" placeholder="갑판에서 불릴 가명" required></label>
+        <div class="field"><span>캐릭터</span>
+          <div class="gender" role="radiogroup" aria-label="캐릭터 성별">
+            <label for="g-m"><input type="radio" name="gender" id="g-m" value="m"><span>남자</span></label>
+            <label for="g-f"><input type="radio" name="gender" id="g-f" value="f"><span>여자</span></label>
+          </div>
+        </div>
+        <div class="field"><span>스타일</span><div class="styles" id="styles" role="radiogroup" aria-label="캐릭터 스타일"></div></div>
+        <div class="field"><span>머리 색</span><div class="swatches" id="hairs" role="radiogroup" aria-label="머리 색"></div></div>
+        <div class="field"><span>옷 색</span><div class="swatches" id="shirts" role="radiogroup" aria-label="옷 색"></div></div>
+        <div class="field"><span>피부 톤</span><div class="swatches" id="skins" role="radiogroup" aria-label="피부 톤"></div></div>
+        <label class="check" for="hat"><input id="hat" type="checkbox" checked> 밀짚모자 쓰기</label>
       </div>
     </div>
-    <div class="field"><span>셔츠 색</span><div class="swatches" id="shirts" role="radiogroup" aria-label="셔츠 색"></div></div>
-    <div class="field"><span>피부 톤</span><div class="swatches" id="skins" role="radiogroup" aria-label="피부 톤"></div></div>
-    <label class="check" for="hat"><input id="hat" type="checkbox" checked> 밀짚모자 쓰기</label>
     <button class="primary-btn" id="enterBtn" type="submit">승선하기</button>
     <p class="status" id="entryStatus">다른 승객을 찾는 중…</p>
   </form>
@@ -220,7 +242,7 @@ const rand = (a,b) => a + Math.random()*(b-a);
 const pick = arr => arr[Math.floor(Math.random()*arr.length)];
 const angDiff = (a,b) => { let d = (b-a) % (Math.PI*2); if (d > Math.PI) d -= Math.PI*2; if (d < -Math.PI) d += Math.PI*2; return d; };
 const r2 = v => Math.round(v*100)/100;
-const MAX_PEOPLE = 20;
+const MAX_PEOPLE = 22;
 const S = 4;            // yacht scale (hull, deck, salon); people and furniture stay life-size
 const DECK_Y = 2.4;
 const SHIRTS = ['#e86a5c','#f2b84b','#5fb3a1','#4f7fd9','#9a7be0','#f3eee2','#2f3b52','#e98bb0'];
@@ -455,8 +477,14 @@ const SAL = { x: 8.0, z0: -14.0, z1: 6.0 };      // salon footprint (lower deck 
 const UPD = { x: 7.45, z0: -13.45, z1: 5.85 };   // walkable part of the upper deck
 const ST = { x: 1.0, zTop: 6.0, zBot: 11.6 };    // staircase, climbing toward the bow
 const stairY = z => DECK_Y + clamp((ST.zBot - z)/(ST.zBot - ST.zTop), 0, 1)*(UP_Y - DECK_Y);
-const levelY = (l, z) => l === 1 ? UP_Y : l === 2 ? stairY(z) : DECK_Y;
-const OBST = [], OBST1 = [];
+const UP2_Y = UP_Y + 3.0;
+const SKY = { x: 4.3, z0: -13.6, z1: -5.9 };     // sky deck slab (3rd level) above the helm
+const UP3 = { x: 3.75, z0: -13.05, z1: -6.05 };  // walkable part of the sky deck
+const ST2 = { x: 1.0, zTop: -6.0, zBot: -0.4 };  // second staircase, sun deck -> sky deck
+const stair2Y = z => UP_Y + clamp((ST2.zBot - z)/(ST2.zBot - ST2.zTop), 0, 1)*(UP2_Y - UP_Y);
+const levelY = (l, z) => l === 1 ? UP_Y : l === 2 ? stairY(z) : l === 3 ? UP2_Y : l === 4 ? stair2Y(z) : DECK_Y;
+const OBST = [], OBST1 = [], OBST3 = [];
+const obstFor = l => l === 3 ? OBST3 : l === 1 ? OBST1 : OBST;
 const lampLights = [];
 const bulbs = [];
 const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -555,12 +583,51 @@ const stairs = (() => {
   const ws = mesh(new THREE.BoxGeometry(3.2, 0.8, 0.05), M.glass, 0, UP_Y + 1.45, hz - 0.55, false); ws.rotation.x = -0.4; yacht.add(ws);
   for (const x of [-0.75, 0.75]) yacht.add(mesh(new THREE.BoxGeometry(0.65, 0.55, 0.6), M.cushion, x, UP_Y + 0.45, hz + 1.25));
   OBST1.push({ x0:-1.35, x1:1.35, z0:hz - 0.7, z1:hz + 1.6 });
-  const az = -8.8, ah = 2.7;
-  for (const s of [1, -1]) { yacht.add(mesh(new THREE.BoxGeometry(0.22, ah, 0.7), M.white, s*3.4, UP_Y + ah/2, az)); OBST1.push({ x0:s*3.4 - 0.12, x1:s*3.4 + 0.12, z0:az - 0.35, z1:az + 0.35 }); }
-  yacht.add(mesh(new THREE.BoxGeometry(7.0, 0.22, 0.8), M.white, 0, UP_Y + ah, az));
-  yacht.add(mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.22, 24), M.white, 0, UP_Y + ah + 0.22, az));
-  yacht.add(mesh(new THREE.BoxGeometry(1.6, 0.06, 0.18), M.dark, 0, UP_Y + ah + 0.42, az));
+  // sky deck: a platform on four posts above the helm, with the radar arch on top
+  const sl = SKY.z1 - SKY.z0, scz = (SKY.z0 + SKY.z1)/2;
+  yacht.add(mesh(new THREE.BoxGeometry(2*SKY.x, 0.25, sl), M.white, 0, UP2_Y - 0.125, scz));
+  for (const [sx, pz] of [[1, SKY.z0 + 0.3], [-1, SKY.z0 + 0.3], [1, SKY.z1 - 0.3], [-1, SKY.z1 - 0.3]]) {
+    const px = sx*(SKY.x - 0.3);
+    yacht.add(mesh(new THREE.CylinderGeometry(0.09, 0.09, UP2_Y - UP_Y - 0.25, 12), M.metal, px, (UP_Y + UP2_Y - 0.25)/2, pz));
+    OBST1.push({ x0:px - 0.12, x1:px + 0.12, z0:pz - 0.12, z1:pz + 0.12 });
+  }
+  const az = -12.3, ah = 2.4;
+  for (const s of [1, -1]) { yacht.add(mesh(new THREE.BoxGeometry(0.2, ah, 0.6), M.white, s*3.0, UP2_Y + ah/2, az)); OBST3.push({ x0:s*3.0 - 0.11, x1:s*3.0 + 0.11, z0:az - 0.3, z1:az + 0.3 }); }
+  yacht.add(mesh(new THREE.BoxGeometry(6.4, 0.2, 0.7), M.white, 0, UP2_Y + ah, az));
+  yacht.add(mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.2, 24), M.white, 0, UP2_Y + ah + 0.2, az));
+  yacht.add(mesh(new THREE.BoxGeometry(1.5, 0.06, 0.18), M.dark, 0, UP2_Y + ah + 0.38, az));
 }
+const skyDeck = (() => {
+  const w = 2*SKY.x, l = SKY.z1 - SKY.z0;
+  const tex = teakTex.clone(); tex.needsUpdate = true; tex.repeat.set(w/2.5, l/2.5);
+  const g = new THREE.PlaneGeometry(w, l); g.rotateX(-Math.PI/2);
+  const d = mesh(g, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.78 }), 0, UP2_Y + 0.005, (SKY.z0 + SKY.z1)/2);
+  d.castShadow = false; d.userData.kind = 'deck3'; yacht.add(d);
+  const X = SKY.x - 0.05, z0 = SKY.z0 + 0.05, z1 = SKY.z1 - 0.05, gap = ST2.x + 0.3;
+  const segs = [[V3(-X, 0, z0), V3(X, 0, z0)], [V3(X, 0, z0), V3(X, 0, z1)], [V3(-X, 0, z0), V3(-X, 0, z1)], [V3(X, 0, z1), V3(gap, 0, z1)], [V3(-gap, 0, z1), V3(-X, 0, z1)]];
+  for (const [a, b] of segs) {
+    for (const hy of [0.95, 0.5]) bar(a.clone().setY(UP2_Y + hy), b.clone().setY(UP2_Y + hy), hy > 0.9 ? 0.035 : 0.018, M.metal);
+    const n = Math.max(1, Math.round(a.distanceTo(b)/1.4));
+    for (let i = 0; i <= n; i++) { const q = a.clone().lerp(b, i/n); yacht.add(mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.95, 6), M.metal, q.x, UP2_Y + 0.475, q.z)); }
+  }
+  return d;
+})();
+const stairs2 = (() => {
+  const g = new THREE.Group(); g.userData.kind = 'stairs2'; yacht.add(g);
+  const n = 15, run = (ST2.zBot - ST2.zTop)/n, rise = (UP2_Y - UP_Y)/n;
+  for (let i = 0; i < n; i++) {
+    const hgt = (i + 1)*rise, z = ST2.zBot - (i + 0.5)*run;
+    g.add(mesh(new THREE.BoxGeometry(2*ST2.x + 0.3, hgt, run), M.white, 0, UP_Y + hgt/2, z));
+    g.add(mesh(new THREE.BoxGeometry(2*ST2.x + 0.3, 0.04, run - 0.03), M.wood, 0, UP_Y + hgt + 0.02, z));
+  }
+  for (const s of [1, -1]) {
+    const x = s*(ST2.x + 0.2);
+    bar(V3(x, UP_Y + 0.95, ST2.zBot), V3(x, UP2_Y + 0.95, ST2.zTop), 0.035, M.metal);
+    for (const t of [0, 0.5]) { const z = lerp(ST2.zBot, ST2.zTop, t); yacht.add(mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.95, 6), M.metal, x, stair2Y(z) + 0.475, z)); }
+  }
+  OBST1.push({ x0:-ST2.x - 0.25, x1:ST2.x + 0.25, z0:ST2.zTop, z1:ST2.zBot });
+  return g;
+})();
 // outdoor bar (starboard aft) and lounge sofa (port aft)
 {
   const bx = 11.2, bz = 30, bl = 4.6;
@@ -609,7 +676,8 @@ const jacuzzi = (() => {
 const LOUNGERS = [];
 for (const cx of [-10.5, -4.5, 4.5, 10.5]) for (const o of [-0.7, 0.7]) LOUNGERS.push({ x: cx + o, z: 19, ry: 0, l: 0, area: '1층 선미' });
 for (const cx of [-5.5, 0, 5.5]) for (const o of [-0.7, 0.7]) LOUNGERS.push({ x: cx + o, z: -25, ry: Math.PI, l: 0, area: '1층 뱃머리' });
-for (const cx of [-4.8, 0, 4.8]) for (const o of [-0.7, 0.7]) LOUNGERS.push({ x: cx + o, z: -1.5, ry: 0, l: 1, area: '2층 선데크' });
+for (const [cx, cz] of [[-5.2, -3.0], [-5.2, 2.2], [5.2, -3.0]]) for (const o of [-0.7, 0.7]) LOUNGERS.push({ x: cx + o, z: cz, ry: 0, l: 1, area: '2층 선데크' });
+for (const o of [-0.7, 0.7]) LOUNGERS.push({ x: o, z: -9.6, ry: 0, l: 3, area: '3층 스카이데크' });
 const TOWELS = [0x2f6c8c, 0xe86a5c, 0xf2b84b, 0x5fb3a1, 0xf6efe2, 0x9a7be0, 0xe98bb0];
 const loungerGroups = [];
 {
@@ -646,11 +714,11 @@ const parasols = [];
     const lan = mesh(new THREE.SphereGeometry(0.07, 10, 8), lanternM, 0, -0.35, 0, false); top.add(lan); bulbs.push(lan);
     g.userData.phase = Math.random()*6;
     yacht.add(g); parasols.push({ g, top });
-    (l ? OBST1 : OBST).push({ x0:x - 0.12, x1:x + 0.12, z0:z - 0.12, z1:z + 0.12 });
+    obstFor(l).push({ x0:x - 0.12, x1:x + 0.12, z0:z - 0.12, z1:z + 0.12 });
   });
 }
 // little side tables with drinks between lounger pairs
-for (const [tx, tl, tz] of [[-7.5, 0, 19.1], [0, 0, 19.1], [7.5, 0, 19.1], [-2.75, 0, -25.1], [2.75, 0, -25.1], [-2.4, 1, -1.4], [2.4, 1, -1.4]]) {
+for (const [tx, tl, tz] of [[-7.5, 0, 19.1], [0, 0, 19.1], [7.5, 0, 19.1], [-2.75, 0, -25.1], [2.75, 0, -25.1], [-3.5, 1, -3.0], [3.5, 1, -3.0], [-3.5, 1, 2.2], [5.2, 1, 2.4], [1.95, 3, -9.6]]) {
   const t = new THREE.Group(); t.position.set(tx, levelY(tl), tz);
   t.add(mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.04, 24), M.wood, 0, 0.5, 0));
   t.add(mesh(new THREE.CylinderGeometry(0.04, 0.12, 0.5, 10), M.metal, 0, 0.25, 0));
@@ -659,8 +727,15 @@ for (const [tx, tl, tz] of [[-7.5, 0, 19.1], [0, 0, 19.1], [7.5, 0, 19.1], [-2.7
   t.add(mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.16, 10), juice, -0.1, 0.6, -0.08));
   t.add(mesh(new THREE.TorusGeometry(0.05, 0.008, 6, 16), new THREE.MeshStandardMaterial({ color: 0xe8f06a }), 0.16, 0.69, 0.05));
   yacht.add(t);
-  (tl ? OBST1 : OBST).push({ x0:tx - 0.42, x1:tx + 0.42, z0:tz - 0.42, z1:tz + 0.42 });
+  obstFor(tl).push({ x0:tx - 0.42, x1:tx + 0.42, z0:tz - 0.42, z1:tz + 0.42 });
 }
+// bean bags around the table at the back-right of the sun deck
+for (let i = 0; i < 4; i++) {
+  const a = i/4*Math.PI*2 + 0.4, x = 5.2 + Math.cos(a)*1.0, z = 2.4 + Math.sin(a)*1.0;
+  const b = mesh(new THREE.SphereGeometry(0.36, 16, 12), new THREE.MeshStandardMaterial({ color: [0xe86a5c, 0x2f6c8c, 0xf2b84b, 0x5fb3a1][i], roughness: 0.95 }), x, UP_Y + 0.2, z);
+  b.scale.set(1, 0.55, 1); yacht.add(b);
+}
+OBST1.push({ x0:3.9, x1:6.5, z0:1.1, z1:3.7 });
 
 /* Festoon string lights, rail lanterns, deck-edge glow and candle lanterns (they come alive at night) */
 const glowMats = [], haloMats = [], festoonBulbs = [];
@@ -707,9 +782,11 @@ function festoon(a, b, sag, step = 0.8){
   bulbAt(0, bowY + 0.12, bz, '#fff1c9', 2.0, 1.2);
   OBST.push({ x0:-0.12, x1:0.12, z0:bz - 0.12, z1:bz + 0.12 });
   for (const s of [1, -1]) festoon(V3(s*X, railTop, SAL.z0 - 0.1), V3(0, bowY, bz), 1.2);
-  festoon(V3(0, UP_Y + 3.15, -8.8), V3(0, bowY, bz), 1.0);
+  festoon(V3(0, UP2_Y + 2.7, -12.3), V3(0, bowY, bz), 1.0);
   // upper sun deck: lines from the radar arch to the back corners and across the back
-  for (const s of [1, -1]) festoon(V3(s*3.5, UP_Y + 2.75, -8.8), V3(s*X, railTop, SAL.z1 + 0.1), 0.6);
+  for (const s of [1, -1]) festoon(V3(s*3.1, UP2_Y + 2.4, -12.3), V3(s*X, railTop, SAL.z1 + 0.1), 0.9);
+  for (const s of [1, -1]) festoon(V3(s*3.1, UP2_Y + 2.4, -12.3), V3(s*(SKY.x - 0.05), UP2_Y + 0.95, SKY.z1 - 0.05), 0.3, 0.6);
+  for (let z = SKY.z0 + 0.6; z <= SKY.z1; z += 2.2) for (const s of [1, -1]) bulbAt(s*(SKY.x - 0.05), UP2_Y + 1.03, z, '#ffb867', 0.9, 0.26);
   // a lit gateway over the top of the staircase instead of a low line across it
   const gx = ST.x + 0.45, gz = SAL.z1 + 0.1, gY = UP_Y + 2.7;
   for (const s of [1, -1]) {
@@ -742,8 +819,9 @@ function festoon(a, b, sag, step = 0.8){
   };
   for (let i = 0; i < 10; i++) { const a = i/10*Math.PI*2 + 0.2; lantern(Math.cos(a)*3.4, DECK_Y, 29 + Math.sin(a)*3.4); }
   for (const [x, z] of [[-12.4, 19], [12.4, 19], [-7.5, 21], [0, 21], [7.5, 21], [-7.6, -25], [7.6, -25], [0, -27.2], [-10, 33], [10, 26]]) lantern(x, DECK_Y, z);
-  for (const [x, z] of [[-6.9, -1.5], [6.9, -1.5], [0, 0.6], [-6.9, -7], [6.9, -7]]) lantern(x, UP_Y, z);
-  for (const [x, y, z] of [[0, DECK_Y + 3.6, 19], [0, DECK_Y + 3.2, 29], [0, DECK_Y + 3.2, -25], [0, UP_Y + 2.4, -1.5], [11, DECK_Y + 2.6, 30]]) {
+  for (const [x, z] of [[-6.9, -3], [6.9, -3], [-6.9, 2.2], [6.9, 0.4], [-2.6, 4.8], [2.6, 4.8], [-6.9, -9], [6.9, -9]]) lantern(x, UP_Y, z);
+  for (const [x, z] of [[-3.3, -9.6], [3.3, -9.6], [-3.3, -6.6], [3.3, -6.6]]) lantern(x, UP2_Y, z);
+  for (const [x, y, z] of [[0, DECK_Y + 3.6, 19], [0, DECK_Y + 3.2, 29], [0, DECK_Y + 3.2, -25], [0, UP_Y + 2.4, 0], [0, UP2_Y + 2.2, -9.6], [11, DECK_Y + 2.6, 30]]) {
     const L = new THREE.PointLight(0xffc98a, 0, 20, 2); L.position.set(x, y, z); yacht.add(L); lampLights.push(L);
   }
 }
@@ -792,43 +870,135 @@ const gulls = [];
 }
 
 /* ================= Avatars ================= */
-// Chibi proportions (about 3 heads tall): big round head, short body and legs.
+// Chibi proportions (about 3 heads tall): big round head, short body and stubby limbs.
 const HEAD_Y = 0.6, HEAD_R = 0.215;
 const AG = {
   torso: new THREE.CylinderGeometry(0.15, 0.19, 0.36, 16),
   tummy: new THREE.SphereGeometry(0.19, 16, 10, 0, Math.PI*2, Math.PI/2, Math.PI/2),
   head: new THREE.SphereGeometry(HEAD_R, 28, 20),
-  eye: new THREE.SphereGeometry(0.03, 10, 8),
-  shine: new THREE.SphereGeometry(0.01, 6, 4),
-  blush: new THREE.CircleGeometry(0.035, 16),
-  mouth: new THREE.TorusGeometry(0.025, 0.007, 6, 12, Math.PI),
+  eye: new THREE.SphereGeometry(0.035, 12, 10),
+  shine: new THREE.SphereGeometry(0.012, 6, 4),
+  petal: new THREE.SphereGeometry(0.01, 6, 4),
+  brow: new THREE.BoxGeometry(0.05, 0.012, 0.012),
+  nose: new THREE.SphereGeometry(0.017, 8, 6),
+  blush: new THREE.CircleGeometry(0.038, 16),
+  mouth: new THREE.TorusGeometry(0.024, 0.007, 6, 12, Math.PI),
   hairCap: new THREE.SphereGeometry(HEAD_R + 0.018, 28, 18, 0, Math.PI*2, 0, Math.PI*0.56),
+  bobCap: new THREE.SphereGeometry(HEAD_R + 0.022, 28, 18, 0, Math.PI*2, 0, Math.PI*0.68),
   hairBack: new THREE.CylinderGeometry(0.19, 0.235, 0.36, 20, 1, false, Math.PI*0.6, Math.PI*0.8),
+  bobBack: new THREE.CylinderGeometry(0.235, 0.25, 0.16, 20, 1, true, Math.PI*0.35, Math.PI*1.3),
   hairTuft: new THREE.ConeGeometry(0.05, 0.12, 8),
+  spike: new THREE.ConeGeometry(0.06, 0.17, 8),
+  curl: new THREE.SphereGeometry(0.068, 10, 8),
+  swoop: new THREE.SphereGeometry(0.1, 12, 8),
+  bun: new THREE.SphereGeometry(0.1, 14, 10),
+  puff: new THREE.SphereGeometry(0.085, 12, 10),
+  tail: new THREE.CylinderGeometry(0.065, 0.025, 0.24, 10),
+  pony: new THREE.CylinderGeometry(0.07, 0.025, 0.3, 10),
+  tie: new THREE.TorusGeometry(0.05, 0.016, 6, 16),
+  bow: new THREE.SphereGeometry(0.045, 10, 8),
+  bangs: new THREE.SphereGeometry(0.12, 14, 8),
+  capCrown: new THREE.SphereGeometry(HEAD_R + 0.03, 24, 12, 0, Math.PI*2, 0, Math.PI*0.5),
+  capBrim: new THREE.CylinderGeometry(0.16, 0.16, 0.018, 20, 1, false, -Math.PI*0.5, Math.PI),
   flower: new THREE.SphereGeometry(0.045, 10, 8),
   arm: new THREE.CylinderGeometry(0.05, 0.045, 0.24, 10),
   sleeve: new THREE.CylinderGeometry(0.065, 0.06, 0.1, 10),
-  hand: new THREE.SphereGeometry(0.058, 10, 8),
+  hand: new THREE.SphereGeometry(0.06, 10, 8),
   shorts: new THREE.CylinderGeometry(0.085, 0.08, 0.13, 10),
   leg: new THREE.CylinderGeometry(0.058, 0.052, 0.22, 10),
-  foot: new THREE.SphereGeometry(0.07, 10, 8),
+  foot: new THREE.SphereGeometry(0.072, 10, 8),
   skirt: new THREE.CylinderGeometry(0.15, 0.27, 0.22, 20, 1, true),
+  strap: new THREE.BoxGeometry(0.035, 0.3, 0.02),
   brim: new THREE.CylinderGeometry(0.34, 0.34, 0.02, 28),
   crown: new THREE.CylinderGeometry(0.15, 0.19, 0.13, 20),
   band: new THREE.CylinderGeometry(0.192, 0.192, 0.035, 20)
 };
 const AM = {
   shorts: new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: 0.85 }),
+  denim: new THREE.MeshStandardMaterial({ color: 0x4a6a9a, roughness: 0.85 }),
   eye: new THREE.MeshBasicMaterial({ color: 0x1b1a22 }),
   shine: new THREE.MeshBasicMaterial({ color: 0xffffff }),
   blush: new THREE.MeshBasicMaterial({ color: 0xff8f8f, transparent: true, opacity: 0.55, depthWrite: false }),
   mouth: new THREE.MeshBasicMaterial({ color: 0x8a3a3a }),
-  hair: { m: new THREE.MeshStandardMaterial({ color: 0x2b211c, roughness: 0.7, side: THREE.DoubleSide }), f: new THREE.MeshStandardMaterial({ color: 0x3a2a22, roughness: 0.65, side: THREE.DoubleSide }) },
   flower: new THREE.MeshStandardMaterial({ color: 0xff9eb5, roughness: 0.6 }),
+  ribbon: new THREE.MeshStandardMaterial({ color: 0xff7a9a, roughness: 0.6 }),
+  capM: new THREE.MeshStandardMaterial({ color: 0x2f6c8c, roughness: 0.7, side: THREE.DoubleSide }),
   sandal: new THREE.MeshStandardMaterial({ color: 0x6e4a30, roughness: 0.7 }),
   straw: new THREE.MeshStandardMaterial({ color: 0xd9b874, roughness: 0.95 }),
   band: new THREE.MeshStandardMaterial({ color: 0x1c2b4a, roughness: 0.7 })
 };
+const HAIRS = ['#2b211c', '#5a3a26', '#9a6238', '#e0b866', '#e99ab2'];
+const STYLE_NAMES = { m: ['단정 머리', '삐죽 머리', '곱슬 머리', '캡모자', '옆가르마'], f: ['긴 생머리', '양갈래', '똥머리', '단발', '포니테일'] };
+const OUTFITS = { m: ['plain', 'floral', 'stripe', 'sailor', 'straps'], f: ['plain', 'dots', 'stripe', 'sailor', 'floral'] };
+const patternCache = new Map();
+function patternTex(kind, color){
+  const key = kind + color;
+  if (patternCache.has(key)) return patternCache.get(key);
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d');
+  g.fillStyle = kind === 'sailor' ? '#f6f3ea' : color; g.fillRect(0, 0, 128, 128);
+  let seed = 7; const rnd = () => (seed = (seed*16807) % 2147483647)/2147483647;
+  if (kind === 'stripe') { g.fillStyle = 'rgba(255,255,255,.85)'; for (let y = 6; y < 128; y += 22) g.fillRect(0, y, 128, 9); }
+  if (kind === 'dots') { g.fillStyle = 'rgba(255,255,255,.9)'; for (let y = 8; y < 128; y += 22) for (let x = (y/22 % 2) ? 14 : 3; x < 128; x += 22) { g.beginPath(); g.arc(x, y, 4.5, 0, Math.PI*2); g.fill(); } }
+  if (kind === 'floral') {
+    for (let i = 0; i < 14; i++) {
+      const x = rnd()*128, y = rnd()*128, r = 5 + rnd()*4;
+      g.fillStyle = i % 3 ? '#fff6e0' : '#ffd25c';
+      for (let p = 0; p < 5; p++) { const a = p/5*Math.PI*2; g.beginPath(); g.arc(x + Math.cos(a)*r, y + Math.sin(a)*r, r*0.7, 0, Math.PI*2); g.fill(); }
+      g.fillStyle = '#f08a3a'; g.beginPath(); g.arc(x, y, r*0.5, 0, Math.PI*2); g.fill();
+    }
+  }
+  if (kind === 'sailor') {
+    g.fillStyle = color; g.fillRect(0, 0, 128, 30); g.fillRect(0, 96, 128, 32);
+    g.fillStyle = '#ffffff'; g.fillRect(0, 22, 128, 3);
+    g.fillStyle = '#e0453a'; g.beginPath(); g.moveTo(0, 30); g.lineTo(10, 52); g.lineTo(20, 30); g.fill(); g.beginPath(); g.moveTo(108, 30); g.lineTo(118, 52); g.lineTo(128, 30); g.fill();
+  }
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  patternCache.set(key, t);
+  return t;
+}
+function addHair(head, look, hairM){
+  const female = look.g === 'f', t = look.t | 0;
+  const put = (geo, mat, x, y, z) => { const m = mesh(geo, mat, x, y, z, false); m.castShadow = true; head.add(m); return m; };
+  if (female && t === 3) { const cap = put(AG.hairCap, hairM, 0, 0.008, -0.012); cap.rotation.x = -0.4; cap.scale.set(1.04, 1, 1.04); put(AG.bobBack, hairM, 0, -0.07, -0.005); }
+  else if (!(!female && t === 3 && !look.h)) { const cap = put(AG.hairCap, hairM, 0, 0.005, -0.012); cap.rotation.x = -0.42; }
+  if (!female) {
+    if (t === 0) { const m = put(AG.hairTuft, hairM, 0.03, HEAD_R + 0.03, 0.05); m.rotation.z = -0.5; }
+    if (t === 1) for (let k = 0; k < 7; k++) {
+      const a = (k - 3)*0.34, m = put(AG.spike, hairM, Math.sin(a)*0.15, 0.15 + Math.cos(a)*0.07, -0.03 - Math.abs(a)*0.04);
+      m.rotation.z = -a*1.1; m.rotation.x = -0.45;
+    }
+    if (t === 2) for (let k = 0; k < 18; k++) {
+      const lat = 0.25 + (k % 3)*0.38, lon = (k/18)*Math.PI*2, r = HEAD_R + 0.02;
+      const x = Math.sin(lon)*Math.cos(lat)*r, y = Math.sin(lat)*r + 0.03, z = Math.cos(lon)*Math.cos(lat)*r - 0.02;
+      if (z > 0.12 && y < 0.17) continue;
+      put(AG.curl, hairM, x, y, z);
+    }
+    if (t === 3 && !look.h) {
+      const cr = put(AG.capCrown, AM.capM, 0, 0.0, -0.005); cr.rotation.x = -0.2;
+      const br = put(AG.capBrim, AM.capM, 0, 0.075, 0.2); br.rotation.x = 0.18;
+    }
+    if (t === 4) { const m = put(AG.swoop, hairM, 0.08, 0.16, 0.11); m.scale.set(1.5, 0.55, 1); m.rotation.z = -0.45; }
+  } else {
+    if (t === 0) {
+      put(AG.hairBack, hairM, 0, -0.12, 0);
+      put(AG.flower, AM.flower, 0.17, 0.11, 0.07);
+      for (const a of [0, 1.26, 2.51, 3.77, 5.03]) put(AG.petal, AM.shine, 0.17 + Math.cos(a)*0.03, 0.11 + Math.sin(a)*0.03, 0.11);
+    }
+    if (t === 1) for (const s of [1, -1]) {
+      put(AG.puff, hairM, s*0.23, 0.02, -0.06);
+      const tl = put(AG.tail, hairM, s*0.27, -0.13, -0.07); tl.rotation.z = s*0.25;
+      put(AG.bow, AM.ribbon, s*0.21, 0.09, -0.05);
+    }
+    if (t === 2) { put(AG.bun, hairM, 0, HEAD_R + 0.06, -0.07); const tie = put(AG.tie, AM.ribbon, 0, HEAD_R + 0.0, -0.06); tie.rotation.x = Math.PI/2 - 0.3; }
+    if (t === 3) { const b = put(AG.bangs, hairM, 0, 0.155, 0.125); b.scale.set(1.5, 0.36, 0.62); b.rotation.x = -0.25; }
+    if (t === 4) {
+      const p = put(AG.pony, hairM, 0, -0.04, -0.26); p.rotation.x = 0.55;
+      const tie = put(AG.tie, AM.ribbon, 0, 0.08, -0.22); tie.rotation.x = 0.4;
+      for (const s of [1, -1]) { const b = put(AG.bow, AM.ribbon, s*0.06, 0.1, -0.23); b.scale.set(1.2, 0.7, 0.5); }
+    }
+  }
+}
 const FONT = '"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",sans-serif';
 function roundRect(g, x, y, w, h, r){ g.beginPath(); g.moveTo(x+r, y); g.arcTo(x+w, y, x+w, y+h, r); g.arcTo(x+w, y+h, x, y+h, r); g.arcTo(x, y+h, x, y, r); g.arcTo(x, y, x+w, y, r); g.closePath(); }
 function labelSprite(text, color, mine){
@@ -879,8 +1049,8 @@ function emojiSprite(e){
 }
 
 class Avatar {
-  constructor(look, mine){
-    this.mine = !!mine; this.root = new THREE.Group(); yacht.add(this.root);
+  constructor(look, mine, parent = yacht){
+    this.mine = !!mine; this.root = new THREE.Group(); parent.add(this.root);
     this.walkT = Math.random()*10; this.emoteT = 0; this.emo = null; this.bubble = null; this.bubbleT = 0; this.speed = 0;
     this.labelY = 1.72; this.build(look);
   }
@@ -888,33 +1058,33 @@ class Avatar {
     if (this.body) { this.root.remove(this.body); this.mats.forEach(m => m.dispose()); }
     if (this.label) { this.root.remove(this.label); this.label.material.map.dispose(); this.label.material.dispose(); }
     this.look = Object.assign({}, look);
-    const shirt = new THREE.MeshStandardMaterial({ color: look.c, roughness: 0.8 });
+    const female = look.g === 'f', style = look.t | 0;
+    const outfit = OUTFITS[female ? 'f' : 'm'][style] || 'plain';
+    const pattern = outfit === 'plain' || outfit === 'straps' ? null : patternTex(outfit, look.c);
+    const shirt = new THREE.MeshStandardMaterial({ color: pattern ? 0xffffff : look.c, map: pattern, roughness: 0.8 });
+    const sleeveM = new THREE.MeshStandardMaterial({ color: outfit === 'sailor' ? 0xf6f3ea : look.c, roughness: 0.8 });
     const skin = new THREE.MeshStandardMaterial({ color: look.k, roughness: 0.7 });
-    this.mats = [shirt, skin];
-    const female = look.g === 'f';
-    const hairM = AM.hair[female ? 'f' : 'm'];
+    const noseM = new THREE.MeshStandardMaterial({ color: new THREE.Color(look.k).multiplyScalar(0.88), roughness: 0.7 });
+    const hairM = new THREE.MeshStandardMaterial({ color: look.hc || HAIRS[0], roughness: 0.65, side: THREE.DoubleSide });
+    this.mats = [shirt, sleeveM, skin, noseM, hairM];
     const body = new THREE.Group(); this.body = body; this.root.add(body);
     const hip = new THREE.Group(); hip.position.y = 0.38; body.add(hip); this.hip = hip;
     const torso = new THREE.Group(); hip.add(torso); this.torso = torso;
     torso.add(mesh(AG.torso, shirt, 0, 0.18, 0));
-    const tum = mesh(AG.tummy, shirt, 0, 0.02, 0); torso.add(tum);
+    torso.add(mesh(AG.tummy, shirt, 0, 0.02, 0));
+    if (!female && outfit === 'straps') for (const s of [1, -1]) { const st = mesh(AG.strap, AM.denim, s*0.085, 0.2, 0.168, false); st.rotation.x = -0.12; torso.add(st); const sb = mesh(AG.strap, AM.denim, s*0.085, 0.2, -0.168, false); sb.rotation.x = 0.12; torso.add(sb); }
     // head & face (the head group lets the head bob on its own)
-    const head = new THREE.Group(); head.position.y = HEAD_Y; torso.add(head); this.head = head;
+    const head = new THREE.Group(); head.position.y = HEAD_Y; head.scale.set(1.06, 1, 1); torso.add(head); this.head = head;
     head.add(mesh(AG.head, skin, 0, 0, 0));
     for (const s of [1, -1]) {
-      const e = mesh(AG.eye, AM.eye, s*0.075, 0.0, HEAD_R - 0.02, false); e.scale.set(1, 1.25, 0.6); head.add(e);
-      head.add(mesh(AG.shine, AM.shine, s*0.075 + 0.012, 0.015, HEAD_R + 0.002, false));
-      const b = mesh(AG.blush, AM.blush, s*0.125, -0.055, HEAD_R - 0.045, false); b.rotation.y = s*0.55; head.add(b);
+      const e = mesh(AG.eye, AM.eye, s*0.072, 0.005, HEAD_R - 0.022, false); e.scale.set(0.95, 1.3, 0.55); head.add(e);
+      head.add(mesh(AG.shine, AM.shine, s*0.072 + 0.012, 0.025, HEAD_R + 0.0, false));
+      const br = mesh(AG.brow, hairM, s*0.074, 0.075, HEAD_R - 0.02, false); br.rotation.z = s*(female ? 0.12 : -0.05); head.add(br);
+      const b = mesh(AG.blush, AM.blush, s*0.128, -0.05, HEAD_R - 0.048, false); b.rotation.y = s*0.58; head.add(b);
     }
-    const mouth = mesh(AG.mouth, AM.mouth, 0, -0.06, HEAD_R - 0.008, false); mouth.rotation.z = Math.PI; head.add(mouth);
-    const cap = mesh(AG.hairCap, hairM, 0, 0.005, -0.012); cap.rotation.x = -0.42; head.add(cap);
-    if (female) {
-      head.add(mesh(AG.hairBack, hairM, 0, -0.12, 0.0));
-      head.add(mesh(AG.flower, AM.flower, 0.17, 0.11, 0.07, false));
-      for (const a of [0, 1.26, 2.51, 3.77, 5.03]) head.add(mesh(AG.shine, AM.flower, 0.17 + Math.cos(a)*0.045, 0.11 + Math.sin(a)*0.045, 0.1, false));
-    } else {
-      const t = mesh(AG.hairTuft, hairM, 0.03, HEAD_R + 0.03, 0.05, false); t.rotation.z = -0.5; head.add(t);
-    }
+    head.add(mesh(AG.nose, noseM, 0, -0.03, HEAD_R - 0.002, false));
+    const mouth = mesh(AG.mouth, AM.mouth, 0, -0.066, HEAD_R - 0.012, false); mouth.rotation.z = Math.PI; head.add(mouth);
+    addHair(head, look, hairM);
     if (look.h) {
       head.add(mesh(AG.brim, AM.straw, 0, 0.13, -0.01));
       head.add(mesh(AG.crown, AM.straw, 0, 0.2, -0.01));
@@ -922,7 +1092,7 @@ class Avatar {
     }
     this.arms = [1, -1].map(side => {
       const p = new THREE.Group(); p.position.set(side*0.19, 0.3, 0); torso.add(p);
-      p.add(mesh(AG.sleeve, shirt, 0, -0.03, 0));
+      p.add(mesh(AG.sleeve, sleeveM, 0, -0.03, 0));
       p.add(mesh(AG.arm, skin, 0, -0.13, 0));
       p.add(mesh(AG.hand, skin, 0, -0.27, 0));
       p.userData.side = side; return p;
@@ -930,14 +1100,14 @@ class Avatar {
     if (female) { const sk = mesh(AG.skirt, shirt, 0, -0.06, 0); hip.add(sk); this.skirt = sk; } else this.skirt = null;
     this.legs = [1, -1].map(side => {
       const p = new THREE.Group(); p.position.set(side*0.085, 0, 0); hip.add(p);
-      if (!female) p.add(mesh(AG.shorts, AM.shorts, 0, -0.06, 0));
+      if (!female) p.add(mesh(AG.shorts, outfit === 'straps' ? AM.denim : AM.shorts, 0, -0.06, 0));
       p.add(mesh(AG.leg, skin, 0, -0.2, 0));
       const f = mesh(AG.foot, AM.sandal, 0, -0.32, 0.03); f.scale.set(0.9, 0.55, 1.3); p.add(f);
       return p;
     });
     this.label = labelSprite(look.n, look.c, this.mine); this.label.position.y = this.labelY; this.root.add(this.label);
   }
-  setLook(look){ if (look.n !== this.look.n || look.c !== this.look.c || look.k !== this.look.k || look.g !== this.look.g || !!look.h !== !!this.look.h) this.build(look); }
+  setLook(look){ if (['n', 'c', 'k', 'g', 't', 'hc'].some(k => look[k] !== this.look[k]) || !!look.h !== !!this.look.h) this.build(look); }
   say(text){
     if (this.bubble) { this.root.remove(this.bubble); this.bubble.material.map.dispose(); this.bubble.material.dispose(); }
     this.bubble = bubbleSprite(text); this.bubbleT = 8; this.root.add(this.bubble);
@@ -984,7 +1154,7 @@ class Avatar {
       if (this.emoteT <= 0) { this.root.remove(this.emo); this.emo.material.map.dispose(); this.emo.material.dispose(); this.emo = null; }
     }
   }
-  dispose(){ yacht.remove(this.root); this.mats.forEach(m => m.dispose()); this.label.material.map.dispose(); }
+  dispose(){ if (this.root.parent) this.root.parent.remove(this.root); this.mats.forEach(m => m.dispose()); this.label.material.map.dispose(); }
 }
 
 /* ================= Movement helpers ================= */
@@ -1005,32 +1175,40 @@ function clamp0(x, z){
   return pushOut(clamp(x, -hw, hw), z, OBST);
 }
 function clamp1(x, z){ return pushOut(clamp(x, -UPD.x, UPD.x), clamp(z, UPD.z0, UPD.z1), OBST1); }
-function clampWalk(x, z, l = 0){ return l === 1 ? clamp1(x, z) : clamp0(x, z); }
+function clamp3(x, z){ return pushOut(clamp(x, -UP3.x, UP3.x), clamp(z, UP3.z0, UP3.z1), OBST3); }
+function clampWalk(x, z, l = 0){ return l === 3 ? clamp3(x, z) : l === 1 ? clamp1(x, z) : clamp0(x, z); }
 // one step from (x,z,l) toward (nx,nz); returns [x, z, l]
+// levels: 0 lower deck, 1 sun deck, 3 sky deck; 2 and 4 are the two staircases
 function stepTo(x, z, l, nx, nz){
   if (l === 0 && Math.abs(nx) < ST.x && nz < ST.zBot + 0.25 && z >= ST.zBot - 0.05) { l = 2; nz = Math.min(nz, ST.zBot - 0.01); }
   else if (l === 1 && Math.abs(nx) < ST.x && nz > UPD.z1 - 0.05) { l = 2; nz = Math.max(nz, ST.zTop + 0.01); }
+  else if (l === 1 && Math.abs(nx) < ST2.x && nz < ST2.zBot + 0.25 && z >= ST2.zBot - 0.05) { l = 4; nz = Math.min(nz, ST2.zBot - 0.01); }
+  else if (l === 3 && Math.abs(nx) < ST2.x && nz > UP3.z1 - 0.05) { l = 4; nz = Math.max(nz, ST2.zTop + 0.01); }
   if (l === 2) {
     nx = clamp(nx, -ST.x*0.9, ST.x*0.9);
     if (nz >= ST.zBot) return [nx, ST.zBot + 0.22, 0];
     if (nz <= ST.zTop) return [nx, ST.zTop - 0.2, 1];
     return [nx, nz, 2];
   }
+  if (l === 4) {
+    nx = clamp(nx, -ST2.x*0.9, ST2.x*0.9);
+    if (nz >= ST2.zBot) return [nx, ST2.zBot + 0.22, 1];
+    if (nz <= ST2.zTop) return [nx, ST2.zTop - 0.2, 3];
+    return [nx, nz, 4];
+  }
   const [cx, cz] = clampWalk(nx, nz, l);
   return [cx, cz, l];
 }
-function segHitsSalon(a, b){
-  for (let i = 1; i < 30; i++) { const t = i/30, x = lerp(a.x, b.x, t), z = lerp(a.z, b.z, t); if (Math.abs(x) < SAL.x + 0.3 && z > SAL.z0 - 0.3 && z < SAL.z1 + 0.3) return true; }
-  return false;
-}
-// lower-deck route that walks around the salon instead of into it
-function route0(a, b){
-  if (!segHitsSalon(a, b)) return [b];
-  const side = p => (Math.abs(p.x) > SAL.x ? Math.sign(p.x) : 0);
-  const region = p => p.z > SAL.z1 ? 'A' : p.z < SAL.z0 ? 'F' : 'S';
-  const X = s => s*(SAL.x + 1.6), zA = SAL.z1 + 1.6, zF = SAL.z0 - 1.6;
+// route that walks around a centred box (the salon, or the second staircase) instead of into it
+function routeAround(a, b, R, m){
+  let hit = false;
+  for (let i = 1; i < 30 && !hit; i++) { const t = i/30, x = lerp(a.x, b.x, t), z = lerp(a.z, b.z, t); hit = Math.abs(x) < R.x + 0.3 && z > R.z0 - 0.3 && z < R.z1 + 0.3; }
+  if (!hit) return [b];
+  const side = p => (Math.abs(p.x) > R.x ? Math.sign(p.x) : 0);
+  const region = p => p.z > R.z1 ? 'A' : p.z < R.z0 ? 'F' : 'S';
+  const X = s => s*(R.x + m), zA = R.z1 + m, zF = R.z0 - m;
   const ra = region(a), rb = region(b);
-  let s = side(a) || side(b) || (b.x >= 0 ? 1 : -1);
+  let s = side(a) || side(b) || ((a.x + b.x) >= 0 ? 1 : -1);
   const pts = [];
   if (ra === 'S' && rb === 'S') pts.push({ x: X(side(a) || 1), z: zA }, { x: X(side(b) || 1), z: zA });
   else {
@@ -1040,15 +1218,26 @@ function route0(a, b){
   pts.push(b);
   return pts;
 }
-const STAIR_BOT = { x: 0, z: ST.zBot + 0.8 }, STAIR_TOP = { x: 0, z: ST.zTop - 0.8 };
+const ST2BOX = { x: ST2.x + 0.25, z0: ST2.zTop, z1: ST2.zBot };
+const route0 = (a, b) => routeAround(a, b, SAL, 1.6);
+const route1 = (a, b) => routeAround(a, b, ST2BOX, 0.9);
+const S1B = { x: 0, z: ST.zBot + 0.8 }, S1T = { x: 0, z: ST.zTop - 0.8 };
+const S2B = { x: 0, z: ST2.zBot + 0.8 }, S2T = { x: 0, z: ST2.zTop - 0.8 };
 function planPath(tx, tz, tl){
   let cur = { x: me.x, z: me.z }, l = me.l, path = [];
-  if (l === 2) { const p = tl === 1 ? STAIR_TOP : STAIR_BOT; path.push(p); cur = p; l = tl === 1 ? 1 : 0; }
+  if (l === 2) { const p = tl >= 1 ? S1T : S1B; path.push(p); cur = p; l = tl >= 1 ? 1 : 0; }
+  if (l === 4) { const p = tl === 3 ? S2T : S2B; path.push(p); cur = p; l = tl === 3 ? 3 : 1; }
   const t = { x: tx, z: tz };
-  if (l === 0 && tl === 0) path = path.concat(route0(cur, t));
-  else if (l === 0 && tl === 1) path = path.concat(route0(cur, STAIR_BOT), [STAIR_TOP, t]);
-  else if (l === 1 && tl === 1) path.push(t);
-  else path = path.concat([STAIR_TOP, STAIR_BOT], route0(STAIR_BOT, t));
+  if (l === tl) path = path.concat(l === 0 ? route0(cur, t) : l === 1 ? route1(cur, t) : [t]);
+  else if (l === 0) {
+    path = path.concat(route0(cur, S1B), [S1T]);
+    path = path.concat(tl === 1 ? route1(S1T, t) : route1(S1T, S2B).concat([S2T, t]));
+  } else if (l === 1) {
+    path = path.concat(tl === 0 ? route1(cur, S1T).concat([S1B], route0(S1B, t)) : route1(cur, S2B).concat([S2T, t]));
+  } else {
+    path.push(S2T, S2B);
+    path = path.concat(tl === 1 ? route1(S2B, t) : route1(S2B, S1T).concat([S1B], route0(S1B, t)));
+  }
   me.path = path; me.stuck = 0;
 }
 function seatPose(i){
@@ -1068,7 +1257,7 @@ let room = null, roomState = 'wait';
 const cam = { yaw: 0.7, pitch: 0.32, dist: 100, tYaw: 0.7, tPitch: 0.32, tDist: 100, focus: new THREE.Vector3(0, 4, 0), userTouched: false };
 const tmpV = new THREE.Vector3(), lookV = new THREE.Vector3(), focusT = new THREE.Vector3(), probeV = new THREE.Vector3();
 const camLocal = new THREE.Vector3();
-const BLOCK = { x: SAL.x + 0.3, z0: SAL.z0 - 0.3, z1: SAL.z1 + 0.3, y0: DECK_Y, y1: UP_Y + 0.05 };
+const BLOCKS = [{ x: SAL.x + 0.3, z0: SAL.z0 - 0.3, z1: SAL.z1 + 0.3, y0: DECK_Y, y1: UP_Y + 0.05 }, { x: SKY.x + 0.2, z0: SKY.z0 - 0.2, z1: SKY.z1 + 0.2, y0: UP2_Y - 0.35, y1: UP2_Y + 0.05 }];
 function seaView(){
   if (me.seat < 0) return;
   const ry = LOUNGERS[me.seat].ry;
@@ -1092,7 +1281,7 @@ function updateCamera(dt){
   // keep the salon block from coming between the camera and the player
   if (entered) for (let i = 1; i <= 40; i++) {
     probeV.lerpVectors(cam.focus, tmpV, i/40);
-    if (Math.abs(probeV.x) < BLOCK.x && probeV.z > BLOCK.z0 && probeV.z < BLOCK.z1 && probeV.y > BLOCK.y0 && probeV.y < BLOCK.y1) {
+    if (BLOCKS.some(B => Math.abs(probeV.x) < B.x && probeV.z > B.z0 && probeV.z < B.z1 && probeV.y > B.y0 && probeV.y < B.y1)) {
       tmpV.lerpVectors(cam.focus, tmpV, Math.max(0.1, (i - 1.5)/40)); break;
     }
   }
@@ -1143,16 +1332,18 @@ function onTap(cx, cy){
   const r = canvas.getBoundingClientRect();
   ndc.set(((cx - r.left)/r.width)*2 - 1, -((cy - r.top)/r.height)*2 + 1);
   raycaster.setFromCamera(ndc, camera);
-  const hits = raycaster.intersectObjects([deck, upperDeck, stairs, ...loungerGroups], true);
+  const hits = raycaster.intersectObjects([deck, upperDeck, skyDeck, stairs, stairs2, ...loungerGroups], true);
   for (const h of hits) {
     let o = h.object; while (o && !o.userData.kind) o = o.parent;
     if (!o) continue;
     const kind = o.userData.kind;
     if (kind === 'lounger') { tryLounger(o.userData.idx); return; }
-    if (kind === 'deck' || kind === 'deck1' || kind === 'stairs') {
+    if (kind === 'deck' || kind === 'deck1' || kind === 'deck3' || kind === 'stairs' || kind === 'stairs2') {
       const p = yacht.worldToLocal(h.point.clone());
       let tl = kind === 'deck1' ? 1 : 0, tx = p.x, tz = p.z;
-      if (kind === 'stairs') { tl = 1; tx = STAIR_TOP.x; tz = STAIR_TOP.z; }
+      if (kind === 'deck3') tl = 3;
+      if (kind === 'stairs') { tl = 1; tx = S1T.x; tz = S1T.z; }
+      if (kind === 'stairs2') { tl = 3; tx = S2T.x; tz = S2T.z; }
       [tx, tz] = clampWalk(tx, tz, tl);
       if (me.seat >= 0) standUp();
       me.pendingSeat = -1; planPath(tx, tz, tl);
@@ -1277,7 +1468,7 @@ function pub(patch){
 function publishFull(){
   if (!entered || !me.look) return;
   lastPub = {};
-  pub({ n: me.look.n, c: me.look.c, k: me.look.k, h: me.look.h, g: me.look.g });
+  pub({ n: me.look.n, c: me.look.c, k: me.look.k, h: me.look.h, g: me.look.g, t: me.look.t, hc: me.look.hc });
   syncPresence();
 }
 function syncPresence(){
@@ -1290,7 +1481,7 @@ function syncPresence(){
 const cleanName = s => (typeof s === 'string' ? s : '').replace(/[\u0000-\u001f\u007f-\u009f​-‏‪-‮⁠-⁤﻿]/g, '').trim().slice(0, 12) || '승객';
 const cleanColor = (s, list) => (typeof s === 'string' && /^#[0-9a-f]{6}$/i.test(s)) ? s : list[0];
 const num = (v, d) => (typeof v === 'number' && isFinite(v)) ? v : d;
-function lookFrom(pr){ return { n: cleanName(pr.n), c: cleanColor(pr.c, SHIRTS), k: cleanColor(pr.k, SKINS), h: !!pr.h, g: pr.g === 'm' ? 'm' : 'f' }; }
+function lookFrom(pr){ return { n: cleanName(pr.n), c: cleanColor(pr.c, SHIRTS), k: cleanColor(pr.k, SKINS), h: !!pr.h, g: pr.g === 'm' ? 'm' : 'f', t: (Number.isInteger(pr.t) && pr.t >= 0 && pr.t < 5) ? pr.t : 0, hc: cleanColor(pr.hc, HAIRS) }; }
 
 function onPeers(peers){
   const seen = new Set();
@@ -1303,7 +1494,7 @@ function onPeers(peers){
     let r = remotes.get(p.peer);
     const look = lookFrom(pr);
     if (!r) {
-      r = { peer: p.peer, look, av: new Avatar(look, false), x: num(pr.x, 0), z: num(pr.z, 15), l: [0, 1, 2].includes(pr.l) ? pr.l : 0, ry: num(pr.r, 0), seat: -1, sayT: null, emoT: null, pres: null, guest: !!p.guest, mineOther: p.isMe };
+      r = { peer: p.peer, look, av: new Avatar(look, false), x: num(pr.x, 0), z: num(pr.z, 15), l: [0, 1, 2, 3, 4].includes(pr.l) ? pr.l : 0, ry: num(pr.r, 0), seat: -1, sayT: null, emoT: null, pres: null, guest: !!p.guest, mineOther: p.isMe };
       r.av.root.position.set(r.x, levelY(r.l, r.z), r.z);
       remotes.set(p.peer, r);
       if (entered) addLog({ sys: `${look.n}님이 승선했어요` });
@@ -1311,7 +1502,7 @@ function onPeers(peers){
     if (r.pres === pr) continue;
     r.pres = pr;
     r.look = look; r.av.setLook(look);
-    r.tx = clamp(num(pr.x, r.x), -16, 16); r.tz = clamp(num(pr.z, r.z), -50, 45); r.tr = num(pr.r, r.ry); r.l = [0, 1, 2].includes(pr.l) ? pr.l : 0;
+    r.tx = clamp(num(pr.x, r.x), -16, 16); r.tz = clamp(num(pr.z, r.z), -50, 45); r.tr = num(pr.r, r.ry); r.l = [0, 1, 2, 3, 4].includes(pr.l) ? pr.l : 0;
     const s = Math.floor(num(pr.s, -1)); r.seat = (s >= 0 && s < LOUNGERS.length) ? s : -1;
     const say = pr.say;
     if (say && typeof say.m === 'string' && say.t !== r.sayT) {
@@ -1344,7 +1535,7 @@ function updateRemotes(dt){
       r.av.speed = lerp(r.av.speed, Math.hypot(r.x - ox, r.z - oz)/Math.max(dt, 1e-3), 0.25);
       x = r.x; z = r.z; ry = r.ry;
       // a passenger seen jumping between decks snaps instead of sliding through the salon
-      if (r.l !== r.shownL) { if (r.shownL !== undefined && r.l !== 2 && r.shownL !== 2) { r.x = x = r.tx ?? x; r.z = z = r.tz ?? z; } r.shownL = r.l; }
+      if (r.l !== r.shownL) { if (r.shownL !== undefined && ![2, 4].includes(r.l) && ![2, 4].includes(r.shownL)) { r.x = x = r.tx ?? x; r.z = z = r.tz ?? z; } r.shownL = r.l; }
       y = levelY(r.l, z);
     }
     r.av.root.position.set(x, y, z); r.av.root.rotation.y = ry;
@@ -1384,7 +1575,7 @@ function renderCrew(){
     const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = row.look.n;
     li.append(dot, nm);
     if (row.mine || row.other) { const m = document.createElement('span'); m.className = 'me'; m.textContent = row.mine ? '나' : '내 다른 탭'; li.append(m); }
-    const st = document.createElement('span'); st.className = 'st'; st.textContent = row.seat >= 0 ? `${LOUNGERS[row.seat].area} 선베드에서 휴식` : row.l === 1 ? '2층 선데크 산책' : row.l === 2 ? '계단' : '1층 갑판 산책';
+    const st = document.createElement('span'); st.className = 'st'; st.textContent = row.seat >= 0 ? `${LOUNGERS[row.seat].area} 선베드에서 휴식` : row.l === 1 ? '2층 선데크 산책' : row.l === 3 ? '3층 스카이데크 산책' : (row.l === 2 || row.l === 4) ? '계단' : '1층 갑판 산책';
     li.append(st); ul.append(li);
   }
   const conn = $('#conn');
@@ -1415,7 +1606,7 @@ function buildSwatches(el, list, name, selected){
   list.forEach((c, i) => {
     const l = document.createElement('label'); l.title = c;
     const inp = document.createElement('input'); inp.type = 'radio'; inp.name = name; inp.value = c; inp.id = `${name}-${i}`; inp.checked = c === selected;
-    inp.setAttribute('aria-label', `${name === 'shirt' ? '셔츠' : '피부'} 색 ${i+1}`);
+    inp.setAttribute('aria-label', `${({ shirt: '옷', skin: '피부', hair: '머리' })[name]} 색 ${i+1}`);
     const s = document.createElement('span'); s.style.background = c;
     l.append(inp, s); el.append(l);
   });
@@ -1426,6 +1617,61 @@ $('#nick').value = prefs.n || randomNick();
 $('#reroll').addEventListener('click', () => { $('#nick').value = randomNick(); });
 { const g = prefs.g === 'm' || prefs.g === 'f' ? prefs.g : pick(['m','f']); $('#g-' + g).checked = true; }
 if (prefs.h === false) $('#hat').checked = false;
+buildSwatches($('#hairs'), HAIRS, 'hair', HAIRS.includes(prefs.hc) ? prefs.hc : pick(HAIRS.slice(0, 4)));
+let selStyle = Number.isInteger(prefs.t) && prefs.t >= 0 && prefs.t < 5 ? prefs.t : Math.floor(Math.random()*5);
+const formGender = () => (document.querySelector('input[name=gender]:checked') || {}).value === 'm' ? 'm' : 'f';
+function buildStyles(){
+  const el = $('#styles'); el.textContent = '';
+  STYLE_NAMES[formGender()].forEach((nm, i) => {
+    const l = document.createElement('label'); l.htmlFor = 'st-' + i;
+    const inp = document.createElement('input'); inp.type = 'radio'; inp.name = 'style'; inp.value = String(i); inp.id = 'st-' + i; inp.checked = i === selStyle;
+    const sp = document.createElement('span'); sp.textContent = nm;
+    l.append(inp, sp); el.append(l);
+  });
+}
+function formLook(){
+  const v = n => (document.querySelector(`input[name=${n}]:checked`) || {}).value;
+  return { n: cleanName($('#nick').value), c: v('shirt') || SHIRTS[0], k: v('skin') || SKINS[0], h: $('#hat').checked, g: formGender(), t: selStyle, hc: v('hair') || HAIRS[0] };
+}
+// live 3D preview of the character being picked
+const Preview = (() => {
+  const c = $('#preview');
+  let r = null, sc, cm, av = null;
+  try {
+    r = new THREE.WebGLRenderer({ canvas: c, antialias: true, alpha: true });
+    r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); r.outputEncoding = THREE.sRGBEncoding; r.toneMapping = THREE.ACESFilmicToneMapping;
+    sc = new THREE.Scene();
+    sc.add(new THREE.HemisphereLight(0xfff1e0, 0x3a4660, 1.05));
+    const dl = new THREE.DirectionalLight(0xffffff, 1.2); dl.position.set(1.5, 2.5, 3); sc.add(dl);
+    cm = new THREE.PerspectiveCamera(26, 1, 0.1, 20); cm.position.set(0, 0.78, 3.4); cm.lookAt(0, 0.62, 0);
+  } catch (e) { r = null; }
+  return {
+    set(look){
+      if (!r) return;
+      if (av) av.dispose();
+      av = new Avatar(look, false, sc); av.label.visible = false;
+      $('#previewName').textContent = `${look.g === 'm' ? '남자' : '여자'} · ${STYLE_NAMES[look.g][look.t]}`;
+    },
+    frame(dt, t){
+      if (!r || !av) return;
+      if (entered) { av.dispose(); av = null; r.dispose(); r = null; return; }
+      const w = c.clientWidth | 0;
+      if (w > 0 && r.getSize(new THREE.Vector2()).x !== w) r.setSize(w, w, false);
+      av.root.rotation.y = Math.sin(t*0.7)*0.7;
+      av.speed = 0; av.pose(dt, t, false);
+      r.render(sc, cm);
+    }
+  };
+})();
+buildStyles();
+const refreshPreview = () => Preview.set(formLook());
+$('#entryForm').addEventListener('change', e => {
+  if (e.target.name === 'gender') buildStyles();
+  if (e.target.name === 'style') selStyle = +e.target.value;
+  refreshPreview();
+});
+$('#reroll').addEventListener('click', () => setTimeout(refreshPreview, 0));
+refreshPreview();
 if (typeof prefs.mv === 'number') $('#volMusic').value = prefs.mv;
 if (typeof prefs.wv === 'number') $('#volWaves').value = prefs.wv;
 
@@ -1433,13 +1679,7 @@ $('#entryForm').addEventListener('submit', e => {
   e.preventDefault();
   if (entered) return;
   if (roomState === 'on' && remotes.size >= MAX_PEOPLE) { updateEntryStatus(); return; }
-  const look = {
-    n: cleanName($('#nick').value),
-    c: (document.querySelector('input[name=shirt]:checked') || {}).value || SHIRTS[0],
-    k: (document.querySelector('input[name=skin]:checked') || {}).value || SKINS[0],
-    h: $('#hat').checked,
-    g: (document.querySelector('input[name=gender]:checked') || {}).value === 'm' ? 'm' : 'f'
-  };
+  const look = formLook();
   me.look = look;
   savePrefs(Object.assign(prefs, look));
   Sound.start();
@@ -1858,6 +2098,7 @@ function frame(now){
   updateEnv(dt);
   if (entered) { updateMe(dt); syncPresence(); }
   updateRemotes(dt);
+  Preview.frame(dt, T);
   if (myAvatar) { myAvatar.pose(dt, T, me.seat >= 0); myAvatar.label.visible = me.seat < 0 || cam.dist > 5; }
   for (const r of remotes.values()) r.av.pose(dt, T, r.seat >= 0);
   marker.material.opacity = Math.max(0, marker.material.opacity - dt*0.9);
