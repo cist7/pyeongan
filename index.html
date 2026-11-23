@@ -192,7 +192,7 @@ body.zen .top .crew, body.zen .seg, body.zen .bottom, body.zen .seatbar{transiti
   <form class="card" id="entryForm">
     <p class="eyebrow">바다 한가운데의 작은 쉼터</p>
     <h1>평안호</h1>
-    <p class="lede">파라솔 아래 선베드에 누워 수평선을 바라보세요. 잔잔한 피아노와 파도 소리가 함께합니다. 최대 10명이 함께 승선할 수 있어요.</p>
+    <p class="lede">파라솔 아래 선베드에 누워 수평선을 바라보세요. 잔잔한 피아노와 파도 소리가 함께합니다. 1층 14자리, 2층 선데크 6자리 — 최대 20명이 함께 승선할 수 있어요.</p>
     <label class="field" for="nick"><span>가명 <button type="button" id="reroll" class="reroll" title="다른 가명 뽑기">↻ 다른 이름</button></span><input id="nick" maxlength="12" placeholder="갑판에서 불릴 가명" required></label>
     <div class="field"><span>캐릭터</span>
       <div class="gender" role="radiogroup" aria-label="캐릭터 성별">
@@ -220,9 +220,9 @@ const rand = (a,b) => a + Math.random()*(b-a);
 const pick = arr => arr[Math.floor(Math.random()*arr.length)];
 const angDiff = (a,b) => { let d = (b-a) % (Math.PI*2); if (d > Math.PI) d -= Math.PI*2; if (d < -Math.PI) d += Math.PI*2; return d; };
 const r2 = v => Math.round(v*100)/100;
-const MAX_PEOPLE = 10;
-const S = 2;            // yacht scale (hull, deck, hardtop); people and furniture stay life-size
-const DECK_Y = 1.8;
+const MAX_PEOPLE = 20;
+const S = 4;            // yacht scale (hull, deck, salon); people and furniture stay life-size
+const DECK_Y = 2.4;
 const SHIRTS = ['#e86a5c','#f2b84b','#5fb3a1','#4f7fd9','#9a7be0','#f3eee2','#2f3b52','#e98bb0'];
 const SKINS = ['#f6d9c2','#e9bb92','#c68b5e','#8b5b3c'];
 const NICK_A = ['느긋한','졸린','반짝이는','수줍은','행복한','여유로운','말랑한','포근한','나른한','설레는'];
@@ -366,7 +366,7 @@ const hemi = new THREE.HemisphereLight(0xffffff, 0x223344, 0.7); scene.add(hemi)
 const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
 sunLight.castShadow = true;
 sunLight.shadow.mapSize.set(4096, 4096);
-Object.assign(sunLight.shadow.camera, { left:-27, right:27, top:27, bottom:-27, near:1, far:160 });
+Object.assign(sunLight.shadow.camera, { left:-54, right:54, top:54, bottom:-54, near:1, far:300 });
 sunLight.shadow.bias = -0.0005; sunLight.shadow.normalBias = 0.03;
 scene.add(sunLight); scene.add(sunLight.target);
 
@@ -437,10 +437,10 @@ function mesh(geo, mat, x=0, y=0, z=0, shadow=true){
   if (shadow) { m.castShadow = true; m.receiveShadow = true; }
   return m;
 }
-function halfW(z){ const u = z/S; return S*(u >= -2 ? 3.6 : 3.6*Math.pow(Math.max(0, (u+12.2)/10.2), 0.55)); }
 const STERN = 10.6*S, BOW = -12.2*S;
+function halfW(z){ const u = z/S; return S*(u >= -2 ? 3.6 : 3.6*Math.pow(Math.max(0, (u+12.2)/10.2), 0.55)); }
 function outlineShape(inset=0){
-  const n = 56, pts = [];
+  const n = 80, pts = [];
   for (let i = 0; i <= n; i++) { const t = i/n; const z = lerp(STERN, BOW, 1 - Math.pow(1-t, 1.6)); pts.push([Math.max(0, halfW(z) - inset), z]); }
   const s = new THREE.Shape();
   s.moveTo(pts[0][0], -pts[0][1]);
@@ -449,20 +449,38 @@ function outlineShape(inset=0){
   s.closePath();
   return s;
 }
+/* Two decks: the salon block in the middle, its roof is the upper sun deck, reached by a stern staircase. */
+const UP_Y = DECK_Y + 3.2;
+const SAL = { x: 8.0, z0: -14.0, z1: 6.0 };      // salon footprint (lower deck obstacle)
+const UPD = { x: 7.45, z0: -13.45, z1: 5.85 };   // walkable part of the upper deck
+const ST = { x: 1.0, zTop: 6.0, zBot: 11.6 };    // staircase, climbing toward the bow
+const stairY = z => DECK_Y + clamp((ST.zBot - z)/(ST.zBot - ST.zTop), 0, 1)*(UP_Y - DECK_Y);
+const levelY = (l, z) => l === 1 ? UP_Y : l === 2 ? stairY(z) : DECK_Y;
+const OBST = [], OBST1 = [];
+const lampLights = [];
+const bulbs = [];
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+function bar(a, b, r, mat){
+  const d = new THREE.Vector3().subVectors(b, a);
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, d.length(), 8), mat);
+  m.position.copy(a).addScaledVector(d, 0.5);
+  m.quaternion.setFromUnitVectors(V3(0, 1, 0), d.normalize());
+  m.castShadow = true; yacht.add(m); return m;
+}
 // hull
 {
-  const hd = DECK_Y + 1.2 - 0.17;
+  const hd = DECK_Y + 1.6 - 0.17;
   const hg = new THREE.ExtrudeGeometry(outlineShape(), { depth: hd, bevelEnabled: true, bevelThickness: 0.08, bevelSize: 0.08, bevelSegments: 3, curveSegments: 4 });
   hg.rotateX(-Math.PI/2); hg.translate(0, DECK_Y - 0.01 - hd - 0.08, 0);
   yacht.add(mesh(hg, M.hull));
-  const sg = new THREE.ExtrudeGeometry(outlineShape(), { depth: 0.3, bevelEnabled: false });
-  sg.rotateX(-Math.PI/2); sg.scale(1.03, 1, 1.01); sg.translate(0, 0.15, 0);
+  const sg = new THREE.ExtrudeGeometry(outlineShape(), { depth: 0.45, bevelEnabled: false });
+  sg.rotateX(-Math.PI/2); sg.scale(1.02, 1, 1.006); sg.translate(0, 0.15, 0);
   yacht.add(mesh(sg, M.stripe, 0, 0, 0, false));
-  const sg2 = new THREE.ExtrudeGeometry(outlineShape(), { depth: 0.05, bevelEnabled: false });
-  sg2.rotateX(-Math.PI/2); sg2.scale(1.025, 1, 1.008); sg2.translate(0, 0.95, 0);
+  const sg2 = new THREE.ExtrudeGeometry(outlineShape(), { depth: 0.07, bevelEnabled: false });
+  sg2.rotateX(-Math.PI/2); sg2.scale(1.015, 1, 1.004); sg2.translate(0, 1.45, 0);
   yacht.add(mesh(sg2, new THREE.MeshStandardMaterial({ color: 0xc9a25a, roughness: 0.35, metalness: 0.5 }), 0, 0, 0, false));
 }
-// deck
+// lower deck
 const deck = (() => {
   const g = new THREE.ShapeGeometry(outlineShape(0.02), 6); g.rotateX(-Math.PI/2);
   const d = mesh(g, M.teak, 0, DECK_Y, 0); d.castShadow = false; d.userData.kind = 'deck';
@@ -470,101 +488,179 @@ const deck = (() => {
 })();
 // transom name + swim platform + ladder
 {
-  const tp = mesh(new THREE.PlaneGeometry(6.6*S, 1.5), M.transom, 0, 1.0, STERN + 0.09, false); yacht.add(tp);
-  const sp = mesh(new THREE.BoxGeometry(7.0*S, 0.14, 1.8), M.teak, 0, 0.42, STERN + 0.95); yacht.add(sp);
-  for (const x of [4.6, 5.0]) yacht.add(mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.1, 8), M.metal, x, 0.2, STERN + 1.75));
-  for (let i = 0; i < 3; i++) yacht.add(mesh(new THREE.BoxGeometry(0.46, 0.03, 0.08), M.metal, 4.8, -0.1 + i*0.25, STERN + 1.75));
+  yacht.add(mesh(new THREE.PlaneGeometry(13, 2.0), M.transom, 0, 1.25, STERN + 0.09, false));
+  yacht.add(mesh(new THREE.BoxGeometry(6.0*S, 0.16, 2.6), M.teak, 0, 0.5, STERN + 1.35));
+  for (const x of [6.0, 6.5]) yacht.add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.4, 8), M.metal, x, 0.2, STERN + 2.55));
+  for (let i = 0; i < 4; i++) yacht.add(mesh(new THREE.BoxGeometry(0.56, 0.03, 0.08), M.metal, 6.25, -0.3 + i*0.25, STERN + 2.55));
 }
-// railing
+// lower railing
 {
-  const y = DECK_Y + 0.85, pts = [], z0 = 8.6*S, z1 = -11.75*S;
-  for (let i = 0; i <= 40; i++) { const z = lerp(z0, z1, i/40); pts.push(new THREE.Vector3(halfW(z) - 0.12, y, z)); }
-  for (let i = 40; i >= 0; i--) { const z = lerp(z0, z1, i/40); pts.push(new THREE.Vector3(-(halfW(z) - 0.12), y, z)); }
-  const curve = new THREE.CatmullRomCurve3(pts);
-  yacht.add(mesh(new THREE.TubeGeometry(curve, 400, 0.03, 6), M.metal));
-  const postG = new THREE.CylinderGeometry(0.02, 0.02, 0.85, 6);
-  for (let z = z0; z > z1 + 0.6; z -= 1.5) for (const s of [1, -1]) yacht.add(mesh(postG, M.metal, s*(halfW(z) - 0.12), DECK_Y + 0.42, z));
+  const y = DECK_Y + 0.9, pts = [], z0 = 8.6*S, z1 = -11.75*S;
+  for (let i = 0; i <= 60; i++) { const z = lerp(z0, z1, i/60); pts.push(V3(halfW(z) - 0.12, y, z)); }
+  for (let i = 60; i >= 0; i--) { const z = lerp(z0, z1, i/60); pts.push(V3(-(halfW(z) - 0.12), y, z)); }
+  yacht.add(mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 600, 0.035, 6), M.metal));
+  const postG = new THREE.CylinderGeometry(0.022, 0.022, 0.9, 6);
+  for (let z = z0; z > z1 + 0.6; z -= 1.6) for (const s of [1, -1]) yacht.add(mesh(postG, M.metal, s*(halfW(z) - 0.12), DECK_Y + 0.45, z));
 }
-// hardtop, windscreen, helm, bar
-const OBST = [];
-const lampLights = [];
-const bulbs = [];
+// salon block with a band of windows that glow warm at night
+const windowM = new THREE.MeshStandardMaterial({ color: 0x1b2632, roughness: 0.08, metalness: 0.55, emissive: 0xffc27a, emissiveIntensity: 0 });
 {
-  const roofY = DECK_Y + 2.75;
-  const rz0 = -3.45*S, rz1 = 1.65*S, rx = 3.1*S, rzc = (rz0 + rz1)/2;
-  yacht.add(mesh(new THREE.BoxGeometry(2*rx + 0.3, 0.16, rz1 - rz0 + 0.3), M.white, 0, roofY, rzc));
-  yacht.add(mesh(new THREE.BoxGeometry(2*rx, 0.06, rz1 - rz0), M.teak, 0, roofY - 0.11, rzc, false));
-  const postG = new THREE.CylinderGeometry(0.08, 0.08, 2.7, 10);
-  for (const [x, z] of [[3.0*S,-3.2*S],[-3.0*S,-3.2*S],[3.1*S,1.4*S],[-3.1*S,1.4*S],[3.05*S,-0.9*S],[-3.05*S,-0.9*S]]) yacht.add(mesh(postG, M.metal, x, DECK_Y + 1.35, z));
-  // radar arch
-  yacht.add(mesh(new THREE.BoxGeometry(0.16, 1.0, 0.6), M.white, 2.4, roofY + 0.55, -0.8));
-  yacht.add(mesh(new THREE.BoxGeometry(0.16, 1.0, 0.6), M.white, -2.4, roofY + 0.55, -0.8));
-  yacht.add(mesh(new THREE.BoxGeometry(5.0, 0.16, 0.65), M.white, 0, roofY + 1.1, -0.8));
-  yacht.add(mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.18, 24), M.white, 0, roofY + 1.3, -0.8));
-  // windscreen
-  const wsW = 3.9*S, wsZ = -3.35*S;
-  const ws = mesh(new THREE.BoxGeometry(wsW, 1.1, 0.05), M.glass, 0, DECK_Y + 1.5, wsZ, false);
-  ws.rotation.x = -0.35; yacht.add(ws);
-  yacht.add(mesh(new THREE.BoxGeometry(wsW, 0.95, 0.14), M.white, 0, DECK_Y + 0.47, wsZ - 0.05));
-  OBST.push({ x0:-wsW/2, x1:wsW/2, z0:wsZ - 0.2, z1:wsZ + 0.15 });
-  // helm
-  const hx = -1.4*S, hz = -2.85*S;
-  yacht.add(mesh(new THREE.BoxGeometry(1.6, 1.0, 0.6), M.white, hx, DECK_Y + 0.5, hz));
-  yacht.add(mesh(new THREE.BoxGeometry(1.3, 0.02, 0.4), M.dark, hx, DECK_Y + 1.02, hz, false));
-  const wheel = mesh(new THREE.TorusGeometry(0.22, 0.025, 8, 24), M.wood, hx, DECK_Y + 1.15, hz + 0.37); wheel.rotation.x = -0.6; yacht.add(wheel);
-  yacht.add(mesh(new THREE.BoxGeometry(0.6, 0.5, 0.55), M.cushion, hx, DECK_Y + 0.45, hz + 1.2));
-  OBST.push({ x0:hx - 0.85, x1:hx + 0.85, z0:hz - 0.35, z1:hz + 1.5 });
-  // bar
-  const bx = 1.95*S, bz = -1.0*S, bl = 3.4;
-  yacht.add(mesh(new THREE.BoxGeometry(0.65, 1.05, bl), M.white, bx, DECK_Y + 0.52, bz));
-  yacht.add(mesh(new THREE.BoxGeometry(0.85, 0.06, bl + 0.15), M.wood, bx - 0.05, DECK_Y + 1.07, bz));
-  const bottleCols = [0x2f6b3a, 0x7a2a22, 0xd8c79a, 0x2a4f6d, 0x5a2a4a];
-  for (let i = 0; i < 5; i++) yacht.add(mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.3, 10), new THREE.MeshStandardMaterial({ color: bottleCols[i], roughness: 0.15, transparent: true, opacity: 0.85 }), bx + 0.12, DECK_Y + 1.25, bz - 1.4 + i*0.25));
-  for (let i = 0; i < 4; i++) yacht.add(mesh(new THREE.CylinderGeometry(0.045, 0.03, 0.12, 10), M.glass, bx - 0.2, DECK_Y + 1.16, bz + 0.2 + i*0.3));
-  for (let i = 0; i < 4; i++) {
-    yacht.add(mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.06, 16), M.cushion, bx - 0.85, DECK_Y + 0.78, bz - 1.3 + i*0.85));
-    yacht.add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.75, 8), M.metal, bx - 0.85, DECK_Y + 0.38, bz - 1.3 + i*0.85));
+  const len = SAL.z1 - SAL.z0, cz = (SAL.z0 + SAL.z1)/2, h = UP_Y - DECK_Y;
+  yacht.add(mesh(new THREE.BoxGeometry(2*SAL.x, h - 0.2, len), M.white, 0, DECK_Y + (h - 0.2)/2, cz));
+  yacht.add(mesh(new THREE.BoxGeometry(2*SAL.x + 0.06, 1.4, len + 0.06), windowM, 0, DECK_Y + 1.7, cz, false));
+  for (let z = SAL.z0 + 1.5; z < SAL.z1 - 0.5; z += 2.5) for (const s of [1, -1]) yacht.add(mesh(new THREE.BoxGeometry(0.1, 1.45, 0.14), M.white, s*(SAL.x + 0.05), DECK_Y + 1.7, z, false));
+  for (let x = -SAL.x + 1.5; x < SAL.x - 0.5; x += 2.2) for (const z of [SAL.z0 - 0.05, SAL.z1 + 0.05]) if (Math.abs(x) > 1.6) yacht.add(mesh(new THREE.BoxGeometry(0.14, 1.45, 0.1), M.white, x, DECK_Y + 1.7, z, false));
+  yacht.add(mesh(new THREE.BoxGeometry(2*SAL.x + 0.5, 0.22, len + 0.5), M.white, 0, UP_Y - 0.11, cz));
+  OBST.push({ x0:-SAL.x, x1:SAL.x, z0:SAL.z0, z1:SAL.z1 });
+}
+// upper deck floor and rails
+const upperDeck = (() => {
+  const w = 2*SAL.x + 0.4, l = SAL.z1 - SAL.z0 + 0.4;
+  const tex = teakTex.clone(); tex.needsUpdate = true; tex.repeat.set(w/2.5, l/2.5);
+  const g = new THREE.PlaneGeometry(w, l); g.rotateX(-Math.PI/2);
+  const d = mesh(g, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.78 }), 0, UP_Y + 0.005, (SAL.z0 + SAL.z1)/2);
+  d.castShadow = false; d.userData.kind = 'deck1'; yacht.add(d);
+  const X = SAL.x + 0.1, z0 = SAL.z0 - 0.1, z1 = SAL.z1 + 0.1, gap = ST.x + 0.3;
+  const segs = [[V3(-X, 0, z0), V3(X, 0, z0)], [V3(X, 0, z0), V3(X, 0, z1)], [V3(-X, 0, z0), V3(-X, 0, z1)], [V3(X, 0, z1), V3(gap, 0, z1)], [V3(-gap, 0, z1), V3(-X, 0, z1)]];
+  for (const [a, b] of segs) {
+    for (const hy of [0.95, 0.5]) bar(a.clone().setY(UP_Y + hy), b.clone().setY(UP_Y + hy), hy > 0.9 ? 0.035 : 0.018, M.metal);
+    const n = Math.max(1, Math.round(a.distanceTo(b)/1.6));
+    for (let i = 0; i <= n; i++) { const p = a.clone().lerp(b, i/n); yacht.add(mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.95, 6), M.metal, p.x, UP_Y + 0.475, p.z)); }
   }
-  OBST.push({ x0:bx - 0.45, x1:bx + 0.45, z0:bz - bl/2, z1:bz + bl/2 });
-  // salon sofa with a low table (left side, under the roof)
-  const sx = -2.2*S + 0.4, sz = -0.2*S;
-  yacht.add(mesh(new THREE.BoxGeometry(0.8, 0.42, 3.2), M.cushion, sx - 0.6, DECK_Y + 0.21, sz));
-  yacht.add(mesh(new THREE.BoxGeometry(0.2, 0.7, 3.2), M.cushion, sx - 1.0, DECK_Y + 0.4, sz));
-  yacht.add(mesh(new THREE.BoxGeometry(0.9, 0.06, 1.8), M.wood, sx + 0.5, DECK_Y + 0.45, sz));
-  yacht.add(mesh(new THREE.BoxGeometry(0.5, 0.42, 1.2), M.white, sx + 0.5, DECK_Y + 0.21, sz));
-  OBST.push({ x0:sx - 1.1, x1:sx + 0.95, z0:sz - 1.6, z1:sz + 1.6 });
-  // string lights around roof edge
-  const bulbG = new THREE.SphereGeometry(0.05, 8, 6);
-  const edge = [[-rx,rz1],[rx,rz1],[rx,rz0],[-rx,rz0]];
-  for (let s = 0; s < 4; s++) {
-    const [ax, az] = edge[s], [bx2, bz2] = edge[(s+1)%4];
-    const n = Math.round(Math.hypot(bx2 - ax, bz2 - az)/0.7);
-    for (let i = 0; i < n; i++) { const t = (i+0.5)/n; const b = mesh(bulbG, M.bulb, lerp(ax,bx2,t), roofY - 0.18 - Math.sin(t*Math.PI)*0.18, lerp(az,bz2,t), false); yacht.add(b); bulbs.push(b); }
+  return d;
+})();
+// staircase at the back of the salon
+const stairs = (() => {
+  const g = new THREE.Group(); g.userData.kind = 'stairs'; yacht.add(g);
+  const n = 16, run = (ST.zBot - ST.zTop)/n, rise = (UP_Y - DECK_Y)/n;
+  for (let i = 0; i < n; i++) {
+    const hgt = (i + 1)*rise, z = ST.zBot - (i + 0.5)*run;
+    g.add(mesh(new THREE.BoxGeometry(2*ST.x + 0.3, hgt, run), M.white, 0, DECK_Y + hgt/2, z));
+    g.add(mesh(new THREE.BoxGeometry(2*ST.x + 0.3, 0.04, run - 0.03), M.wood, 0, DECK_Y + hgt + 0.02, z));
   }
-  for (const [x, y, z] of [[0, DECK_Y + 2.4, -4.5], [0, DECK_Y + 2.4, 0.5], [0, DECK_Y + 2.8, 9.5], [0, DECK_Y + 2.8, 16.5], [0, DECK_Y + 2.6, -12]]) {
-    const L = new THREE.PointLight(0xffc98a, 0, 16, 2); L.position.set(x, y, z); yacht.add(L); lampLights.push(L);
+  for (const s of [1, -1]) {
+    const x = s*(ST.x + 0.2);
+    bar(V3(x, DECK_Y + 0.95, ST.zBot), V3(x, UP_Y + 0.95, ST.zTop), 0.035, M.metal);
+    for (const t of [0, 0.33, 0.66]) { const z = lerp(ST.zBot, ST.zTop, t); yacht.add(mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.95, 6), M.metal, x, stairY(z) + 0.475, z)); }
   }
+  OBST.push({ x0:-ST.x - 0.25, x1:ST.x + 0.25, z0:ST.zTop, z1:ST.zBot });
+  return g;
+})();
+// flybridge: helm, windscreen and radar arch at the front of the upper deck
+{
+  const hz = -11.6;
+  yacht.add(mesh(new THREE.BoxGeometry(2.6, 1.1, 0.8), M.white, 0, UP_Y + 0.55, hz));
+  yacht.add(mesh(new THREE.BoxGeometry(2.2, 0.03, 0.5), M.dark, 0, UP_Y + 1.12, hz, false));
+  const wheel = mesh(new THREE.TorusGeometry(0.24, 0.028, 8, 24), M.wood, -0.5, UP_Y + 1.25, hz + 0.45); wheel.rotation.x = -0.6; yacht.add(wheel);
+  const ws = mesh(new THREE.BoxGeometry(3.2, 0.8, 0.05), M.glass, 0, UP_Y + 1.45, hz - 0.55, false); ws.rotation.x = -0.4; yacht.add(ws);
+  for (const x of [-0.75, 0.75]) yacht.add(mesh(new THREE.BoxGeometry(0.65, 0.55, 0.6), M.cushion, x, UP_Y + 0.45, hz + 1.25));
+  OBST1.push({ x0:-1.35, x1:1.35, z0:hz - 0.7, z1:hz + 1.6 });
+  const az = -8.8, ah = 2.7;
+  for (const s of [1, -1]) { yacht.add(mesh(new THREE.BoxGeometry(0.22, ah, 0.7), M.white, s*3.4, UP_Y + ah/2, az)); OBST1.push({ x0:s*3.4 - 0.12, x1:s*3.4 + 0.12, z0:az - 0.35, z1:az + 0.35 }); }
+  yacht.add(mesh(new THREE.BoxGeometry(7.0, 0.22, 0.8), M.white, 0, UP_Y + ah, az));
+  yacht.add(mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.22, 24), M.white, 0, UP_Y + ah + 0.22, az));
+  yacht.add(mesh(new THREE.BoxGeometry(1.6, 0.06, 0.18), M.dark, 0, UP_Y + ah + 0.42, az));
+}
+// outdoor bar (starboard aft) and lounge sofa (port aft)
+{
+  const bx = 11.2, bz = 30, bl = 4.6;
+  yacht.add(mesh(new THREE.BoxGeometry(0.7, 1.05, bl), M.white, bx, DECK_Y + 0.52, bz));
+  yacht.add(mesh(new THREE.BoxGeometry(0.95, 0.06, bl + 0.2), M.wood, bx - 0.06, DECK_Y + 1.08, bz));
+  const bottleCols = [0x2f6b3a, 0x7a2a22, 0xd8c79a, 0x2a4f6d, 0x5a2a4a, 0x2f6b3a];
+  for (let i = 0; i < 6; i++) yacht.add(mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.3, 10), new THREE.MeshStandardMaterial({ color: bottleCols[i], roughness: 0.15, transparent: true, opacity: 0.85 }), bx + 0.15, DECK_Y + 1.26, bz - 1.8 + i*0.3));
+  for (let i = 0; i < 4; i++) yacht.add(mesh(new THREE.CylinderGeometry(0.045, 0.03, 0.12, 10), M.glass, bx - 0.25, DECK_Y + 1.17, bz - 0.6 + i*0.4));
+  for (let i = 0; i < 5; i++) {
+    yacht.add(mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.06, 16), M.cushion, bx - 0.95, DECK_Y + 0.78, bz - 1.8 + i*0.9));
+    yacht.add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.75, 8), M.metal, bx - 0.95, DECK_Y + 0.38, bz - 1.8 + i*0.9));
+  }
+  OBST.push({ x0:bx - 0.5, x1:bx + 0.5, z0:bz - bl/2, z1:bz + bl/2 });
+  const sx = -11.6, sz = 30;
+  yacht.add(mesh(new THREE.BoxGeometry(0.9, 0.42, 4.4), M.cushion, sx - 0.4, DECK_Y + 0.21, sz));
+  yacht.add(mesh(new THREE.BoxGeometry(0.22, 0.75, 4.4), M.cushion, sx - 0.85, DECK_Y + 0.42, sz));
+  yacht.add(mesh(new THREE.BoxGeometry(2.0, 0.42, 0.9), M.cushion, sx + 0.6, DECK_Y + 0.21, sz - 1.75));
+  yacht.add(mesh(new THREE.BoxGeometry(1.1, 0.06, 2.0), M.wood, sx + 0.95, DECK_Y + 0.46, sz + 0.4));
+  yacht.add(mesh(new THREE.BoxGeometry(0.6, 0.42, 1.4), M.white, sx + 0.95, DECK_Y + 0.21, sz + 0.4));
+  for (const c of [0xe86a5c, 0x2f6c8c, 0xf2b84b]) { const p = mesh(new THREE.BoxGeometry(0.12, 0.38, 0.42), new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 }), sx - 0.62, DECK_Y + 0.6, sz - 1.2 + bulbs.length*0 + Math.random()*2.4); p.rotation.z = 0.25; yacht.add(p); }
+  OBST.push({ x0:sx - 1.0, x1:sx + 1.6, z0:sz - 2.25, z1:sz + 2.2 });
 }
 // underwater stern glow (night)
 const sternGlow = (() => {
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(22, 16), new THREE.MeshBasicMaterial({ map: glowTex, color: 0x48c8ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
-  m.rotation.x = -Math.PI/2; m.position.set(0, 0.32, STERN + 3); yacht.add(m);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(44, 30), new THREE.MeshBasicMaterial({ map: glowTex, color: 0x48c8ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+  m.rotation.x = -Math.PI/2; m.position.set(0, 0.35, STERN + 6); yacht.add(m);
   return m;
 })();
 // aft jacuzzi
 const jacuzzi = (() => {
-  const g = new THREE.Group(); g.position.set(0, DECK_Y, 16.0);
-  g.add(mesh(new THREE.CylinderGeometry(1.9, 1.95, 0.55, 40), M.white, 0, 0.275, 0));
-  g.add(mesh(new THREE.TorusGeometry(1.88, 0.08, 8, 48), M.white, 0, 0.55, 0).rotateX(Math.PI/2));
-  const water = mesh(new THREE.CircleGeometry(1.8, 40), new THREE.MeshStandardMaterial({ color: 0x5fd3e2, roughness: 0.08, metalness: 0.1, emissive: 0x1a8fb0, emissiveIntensity: 0.15, transparent: true, opacity: 0.88 }), 0, 0.565, 0, false);
+  const JR = 1.37;
+  const g = new THREE.Group(); g.position.set(0, DECK_Y, 29.0); g.scale.set(JR, 1, JR);
+  g.add(mesh(new THREE.CylinderGeometry(1.9, 1.95, 0.55, 48), M.white, 0, 0.275, 0));
+  g.add(mesh(new THREE.TorusGeometry(1.88, 0.08, 8, 56), M.white, 0, 0.55, 0).rotateX(Math.PI/2));
+  const water = mesh(new THREE.CircleGeometry(1.8, 48), new THREE.MeshStandardMaterial({ color: 0x5fd3e2, roughness: 0.08, metalness: 0.1, emissive: 0x1a8fb0, emissiveIntensity: 0.15, transparent: true, opacity: 0.88 }), 0, 0.565, 0, false);
   water.rotation.x = -Math.PI/2; g.add(water);
   const bubbleM = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 });
   const bubbles = [];
-  for (let i = 0; i < 26; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(rand(0.03, 0.06), 6, 4), bubbleM); const a = rand(0, 6.3), r = rand(0, 1.6); b.position.set(Math.cos(a)*r, 0.57, Math.sin(a)*r); b.userData.ph = rand(0, 6); g.add(b); bubbles.push(b); }
+  for (let i = 0; i < 40; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(rand(0.03, 0.06), 6, 4), bubbleM); const a = rand(0, 6.3), r = rand(0, 1.6); b.position.set(Math.cos(a)*r, 0.57, Math.sin(a)*r); b.userData.ph = rand(0, 6); g.add(b); bubbles.push(b); }
   yacht.add(g);
-  OBST.push({ x0:-2.05, x1:2.05, z0:13.95, z1:18.05 });
+  OBST.push({ x0:-2.8, x1:2.8, z0:26.2, z1:31.8 });
   return { g, water, bubbles };
 })();
+
+/* Loungers & parasols: 14 on the lower deck, 6 on the upper sun deck */
+const LOUNGERS = [];
+for (const cx of [-10.5, -4.5, 4.5, 10.5]) for (const o of [-0.7, 0.7]) LOUNGERS.push({ x: cx + o, z: 19, ry: 0, l: 0, area: '1층 선미' });
+for (const cx of [-5.5, 0, 5.5]) for (const o of [-0.7, 0.7]) LOUNGERS.push({ x: cx + o, z: -25, ry: Math.PI, l: 0, area: '1층 뱃머리' });
+for (const cx of [-4.8, 0, 4.8]) for (const o of [-0.7, 0.7]) LOUNGERS.push({ x: cx + o, z: -1.5, ry: 0, l: 1, area: '2층 선데크' });
+const TOWELS = [0x2f6c8c, 0xe86a5c, 0xf2b84b, 0x5fb3a1, 0xf6efe2, 0x9a7be0, 0xe98bb0];
+const loungerGroups = [];
+{
+  const frameG = new THREE.BoxGeometry(0.8, 0.07, 2.0), legG = new THREE.BoxGeometry(0.06, 0.24, 0.06);
+  const seatG = new THREE.BoxGeometry(0.72, 0.1, 1.28), backG = new THREE.BoxGeometry(0.72, 0.1, 0.82);
+  const towelG = new THREE.BoxGeometry(0.5, 0.015, 1.1);
+  const towelMs = TOWELS.map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.95 }));
+  LOUNGERS.forEach((L, i) => {
+    const g = new THREE.Group(); g.position.set(L.x, levelY(L.l), L.z); g.rotation.y = L.ry;
+    g.add(mesh(frameG, M.wood, 0, 0.27, 0));
+    for (const [x, z] of [[0.34,0.9],[-0.34,0.9],[0.34,-0.9],[-0.34,-0.9]]) g.add(mesh(legG, M.wood, x, 0.12, z));
+    g.add(mesh(seatG, M.cushion, 0, 0.36, 0.34));
+    const back = mesh(backG, M.cushion, 0, 0.6, -0.62); back.rotation.x = 0.6; g.add(back);
+    const towel = mesh(towelG, towelMs[i % towelMs.length], 0, 0.418, 0.4, false); towel.receiveShadow = true; g.add(towel);
+    g.userData = { kind: 'lounger', idx: i };
+    yacht.add(g); loungerGroups.push(g);
+  });
+}
+const parasols = [];
+{
+  const poleG = new THREE.CylinderGeometry(0.035, 0.035, 2.3, 8);
+  const coneG = new THREE.ConeGeometry(1.45, 0.5, 16, 1, true);
+  const baseG = new THREE.CylinderGeometry(0.22, 0.26, 0.08, 16);
+  const lanternM = new THREE.MeshBasicMaterial({ color: 0xd8d2c4 });
+  const spots = [];
+  for (let i = 0; i < LOUNGERS.length; i += 2) { const a = LOUNGERS[i], b = LOUNGERS[i + 1]; spots.push([(a.x + b.x)/2, a.l, a.z]); }
+  spots.forEach(([x, l, z]) => {
+    const g = new THREE.Group(); g.position.set(x, levelY(l), z);
+    g.add(mesh(baseG, M.dark, 0, 0.04, 0));
+    g.add(mesh(poleG, M.wood, 0, 1.15, 0));
+    const top = new THREE.Group(); top.position.y = 2.25; g.add(top);
+    top.add(mesh(coneG, M.canopy, 0, 0, 0));
+    top.add(mesh(new THREE.SphereGeometry(0.06, 10, 8), M.wood, 0, 0.27, 0));
+    const lan = mesh(new THREE.SphereGeometry(0.07, 10, 8), lanternM, 0, -0.35, 0, false); top.add(lan); bulbs.push(lan);
+    g.userData.phase = Math.random()*6;
+    yacht.add(g); parasols.push({ g, top });
+    (l ? OBST1 : OBST).push({ x0:x - 0.12, x1:x + 0.12, z0:z - 0.12, z1:z + 0.12 });
+  });
+}
+// little side tables with drinks between lounger pairs
+for (const [tx, tl, tz] of [[-7.5, 0, 19.1], [0, 0, 19.1], [7.5, 0, 19.1], [-2.75, 0, -25.1], [2.75, 0, -25.1], [-2.4, 1, -1.4], [2.4, 1, -1.4]]) {
+  const t = new THREE.Group(); t.position.set(tx, levelY(tl), tz);
+  t.add(mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.04, 24), M.wood, 0, 0.5, 0));
+  t.add(mesh(new THREE.CylinderGeometry(0.04, 0.12, 0.5, 10), M.metal, 0, 0.25, 0));
+  const juice = new THREE.MeshStandardMaterial({ color: 0xf29a4a, roughness: 0.2, transparent: true, opacity: 0.9 });
+  t.add(mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.16, 10), juice, 0.12, 0.6, 0.05));
+  t.add(mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.16, 10), juice, -0.1, 0.6, -0.08));
+  t.add(mesh(new THREE.TorusGeometry(0.05, 0.008, 6, 16), new THREE.MeshStandardMaterial({ color: 0xe8f06a }), 0.16, 0.69, 0.05));
+  yacht.add(t);
+  (tl ? OBST1 : OBST).push({ x0:tx - 0.42, x1:tx + 0.42, z0:tz - 0.42, z1:tz + 0.42 });
+}
 
 /* Festoon string lights, rail lanterns, deck-edge glow and candle lanterns (they come alive at night) */
 const glowMats = [], haloMats = [], festoonBulbs = [];
@@ -585,108 +681,71 @@ function bulbAt(x, y, z, night, size = 1, halo = 0.42){
 }
 const FESTOON = ['#ffd58f', '#ffd58f', '#ffb46a', '#ffd58f', '#ff9fbf', '#ffd58f', '#9fe2ff'];
 const wireM = new THREE.LineBasicMaterial({ color: 0x2b2b2b });
-function festoon(a, b, sag, step = 0.7){
+function festoon(a, b, sag, step = 0.8){
   const pts = [];
-  for (let i = 0; i <= 48; i++) { const t = i/48; const p = new THREE.Vector3().lerpVectors(a, b, t); p.y -= sag*4*t*(1 - t); pts.push(p); }
+  for (let i = 0; i <= 60; i++) { const t = i/60; const p = new THREE.Vector3().lerpVectors(a, b, t); p.y -= sag*4*t*(1 - t); pts.push(p); }
   yacht.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wireM));
   const n = Math.max(2, Math.round(a.distanceTo(b)/step));
   for (let i = 1; i < n; i++) { const t = i/n; const p = new THREE.Vector3().lerpVectors(a, b, t); bulbAt(p.x, p.y - sag*4*t*(1 - t) - 0.07, p.z, FESTOON[i % FESTOON.length]); }
 }
 {
-  const V = (x, y, z) => new THREE.Vector3(x, y, z);
-  const roofY = DECK_Y + 2.75 - 0.12, rx = 3.1*S - 0.1, rBack = 1.65*S, rFront = -3.45*S;
-  // aft: two stern masts, side runs, a cross over the jacuzzi and one across the stern
-  const mastY = DECK_Y + 3.4, mz = STERN - 1.0, mx = 6.3;
-  const mastG = new THREE.CylinderGeometry(0.05, 0.07, 3.4, 10);
-  for (const s of [1, -1]) { yacht.add(mesh(mastG, M.metal, s*mx, DECK_Y + 1.7, mz)); yacht.add(mesh(new THREE.SphereGeometry(0.08, 10, 8), M.metal, s*mx, mastY + 0.02, mz)); }
-  OBST.push({ x0:mx - 0.1, x1:mx + 0.1, z0:mz - 0.1, z1:mz + 0.1 }, { x0:-mx - 0.1, x1:-mx + 0.1, z0:mz - 0.1, z1:mz + 0.1 });
-  for (const s of [1, -1]) festoon(V(s*rx, roofY, rBack), V(s*mx, mastY, mz), 0.75);
-  festoon(V(-rx, roofY, rBack), V(mx, mastY, mz), 0.95);
-  festoon(V(rx, roofY, rBack), V(-mx, mastY, mz), 0.95);
-  festoon(V(-mx, mastY, mz), V(mx, mastY, mz), 0.55);
-  // bow: a light mast with three dressing lines back to the roof
-  const bz = -10.2*S, bowY = DECK_Y + 4.4;
-  yacht.add(mesh(new THREE.CylinderGeometry(0.05, 0.08, 4.4, 10), M.metal, 0, DECK_Y + 2.2, bz));
-  bulbAt(0, bowY + 0.1, bz, '#fff1c9', 1.6, 0.9);
-  OBST.push({ x0:-0.1, x1:0.1, z0:bz - 0.1, z1:bz + 0.1 });
-  for (const x of [-rx, 0, rx]) festoon(V(x, roofY, rFront), V(0, bowY, bz), x === 0 ? 0.45 : 0.6);
-  // little lanterns on the rail posts
-  for (let z = 8.6*S; z > -11.75*S + 0.6; z -= 3.0) for (const s of [1, -1]) bulbAt(s*(halfW(z) - 0.12), DECK_Y + 0.92, z, '#ffb867', 0.9, 0.26);
-  // soft glow strip along the deck edge
-  const edgePts = [];
-  for (let i = 0; i <= 60; i++) { const z = lerp(STERN - 0.2, -11.9*S, i/60); edgePts.push(V(halfW(z) - 0.22, DECK_Y + 0.03, z)); }
-  for (let i = 60; i >= 0; i--) { const z = lerp(STERN - 0.2, -11.9*S, i/60); edgePts.push(V(-(halfW(z) - 0.22), DECK_Y + 0.03, z)); }
-  yacht.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edgePts), 500, 0.025, 5), bulbMat('#ffcf9a')));
-  // candle lanterns around the jacuzzi and beside the lounger pairs
-  const lanternGlass = new THREE.MeshStandardMaterial({ color: 0xf3ead8, roughness: 0.3, transparent: true, opacity: 0.55 });
-  const lantern = (x, z) => {
-    yacht.add(mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.04, 12), M.dark, x, DECK_Y + 0.02, z));
-    yacht.add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.26, 12, 1, true), lanternGlass, x, DECK_Y + 0.17, z, false));
-    yacht.add(mesh(new THREE.ConeGeometry(0.12, 0.08, 12), M.dark, x, DECK_Y + 0.34, z));
-    bulbAt(x, DECK_Y + 0.15, z, '#ffa94d', 0.9, 0.55);
-  };
-  for (let i = 0; i < 8; i++) { const a = i/8*Math.PI*2 + 0.2; lantern(Math.cos(a)*2.45, 16.0 + Math.sin(a)*2.45); }
-  for (const [x, z] of [[-6.1, 9.5], [6.1, 9.5], [-2.3, 11.0], [2.3, 11.0], [0, -11.2], [-3.8, -13.0], [3.8, -13.0]]) lantern(x, z);
-  for (const [x, y, z] of [[0, DECK_Y + 3.0, 19], [0, DECK_Y + 3.2, -18]]) {
-    const L = new THREE.PointLight(0xffc98a, 0, 16, 2); L.position.set(x, y, z); yacht.add(L); lampLights.push(L);
+  const railTop = UP_Y + 0.95, X = SAL.x + 0.1;
+  // aft: two stern masts with lines to the upper deck's back corners, a cross over the jacuzzi, one across the stern
+  const mastH = 4.3, mastY = DECK_Y + mastH, mz = STERN - 2.5, mx = 12.5;
+  for (const s of [1, -1]) {
+    yacht.add(mesh(new THREE.CylinderGeometry(0.06, 0.08, mastH, 10), M.metal, s*mx, DECK_Y + mastH/2, mz));
+    yacht.add(mesh(new THREE.SphereGeometry(0.1, 10, 8), M.metal, s*mx, mastY + 0.03, mz));
+    OBST.push({ x0:s*mx - 0.1, x1:s*mx + 0.1, z0:mz - 0.1, z1:mz + 0.1 });
+    festoon(V3(s*X, railTop, SAL.z1 + 0.1), V3(s*mx, mastY, mz), 1.3);
   }
-}
-
-/* Loungers & parasols */
-const LOUNGERS = [
-  { x:-5.3, z:9.5, ry:0 }, { x:-3.9, z:9.5, ry:0 }, { x:-0.7, z:9.5, ry:0 },
-  { x:0.7, z:9.5, ry:0 }, { x:3.9, z:9.5, ry:0 }, { x:5.3, z:9.5, ry:0 },
-  { x:-2.8, z:-13.0, ry:Math.PI }, { x:-1.4, z:-13.0, ry:Math.PI },
-  { x:1.4, z:-13.0, ry:Math.PI }, { x:2.8, z:-13.0, ry:Math.PI }
-];
-const TOWELS = [0x2f6c8c, 0xe86a5c, 0xf2b84b, 0x5fb3a1, 0xf6efe2, 0x9a7be0, 0x2f6c8c, 0xe98bb0, 0xf2b84b, 0x5fb3a1];
-const loungerGroups = [];
-{
-  const frameG = new THREE.BoxGeometry(0.8, 0.07, 2.0), legG = new THREE.BoxGeometry(0.06, 0.24, 0.06);
-  const seatG = new THREE.BoxGeometry(0.72, 0.1, 1.28), backG = new THREE.BoxGeometry(0.72, 0.1, 0.82);
-  const towelG = new THREE.BoxGeometry(0.5, 0.015, 1.1);
-  LOUNGERS.forEach((L, i) => {
-    const g = new THREE.Group(); g.position.set(L.x, DECK_Y, L.z); g.rotation.y = L.ry;
-    g.add(mesh(frameG, M.wood, 0, 0.27, 0));
-    for (const [x, z] of [[0.34,0.9],[-0.34,0.9],[0.34,-0.9],[-0.34,-0.9]]) g.add(mesh(legG, M.wood, x, 0.12, z));
-    g.add(mesh(seatG, M.cushion, 0, 0.36, 0.34));
-    const back = mesh(backG, M.cushion, 0, 0.6, -0.62); back.rotation.x = 0.6; g.add(back);
-    const towel = mesh(towelG, new THREE.MeshStandardMaterial({ color: TOWELS[i], roughness: 0.95 }), 0, 0.418, 0.4, false); towel.receiveShadow = true; g.add(towel);
-    g.userData = { kind: 'lounger', idx: i };
-    yacht.add(g); loungerGroups.push(g);
-  });
-}
-const parasols = [];
-{
-  const spots = [[-4.6,9.5],[0,9.5],[4.6,9.5],[-2.1,-13.0],[2.1,-13.0]];
-  const poleG = new THREE.CylinderGeometry(0.035, 0.035, 2.3, 8);
-  const coneG = new THREE.ConeGeometry(1.45, 0.5, 16, 1, true);
-  const baseG = new THREE.CylinderGeometry(0.22, 0.26, 0.08, 16);
-  const lanternM = new THREE.MeshBasicMaterial({ color: 0xd8d2c4 });
-  spots.forEach(([x, z]) => {
-    const g = new THREE.Group(); g.position.set(x, DECK_Y, z);
-    g.add(mesh(baseG, M.dark, 0, 0.04, 0));
-    g.add(mesh(poleG, M.wood, 0, 1.15, 0));
-    const top = new THREE.Group(); top.position.y = 2.25; g.add(top);
-    const cone = mesh(coneG, M.canopy, 0, 0, 0); top.add(cone);
-    top.add(mesh(new THREE.SphereGeometry(0.06, 10, 8), M.wood, 0, 0.27, 0));
-    const lan = mesh(new THREE.SphereGeometry(0.07, 10, 8), lanternM, 0, -0.35, 0, false); top.add(lan); bulbs.push(lan);
-    g.userData.phase = Math.random()*6;
-    yacht.add(g); parasols.push({ g, top });
-    OBST.push({ x0:x-0.12, x1:x+0.12, z0:z-0.12, z1:z+0.12 });
-  });
-}
-// little side tables with drinks between lounger pairs
-for (const [tx, tz] of [[-2.3, 9.6], [2.3, 9.6], [0, -16.2]]) {
-  const t = new THREE.Group(); t.position.set(tx, DECK_Y, tz);
-  t.add(mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.04, 24), M.wood, 0, 0.5, 0));
-  t.add(mesh(new THREE.CylinderGeometry(0.04, 0.12, 0.5, 10), M.metal, 0, 0.25, 0));
-  const juice = new THREE.MeshStandardMaterial({ color: 0xf29a4a, roughness: 0.2, transparent: true, opacity: 0.9 });
-  t.add(mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.16, 10), juice, 0.12, 0.6, 0.05));
-  t.add(mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.16, 10), juice, -0.1, 0.6, -0.08));
-  t.add(mesh(new THREE.TorusGeometry(0.05, 0.008, 6, 16), new THREE.MeshStandardMaterial({ color: 0xe8f06a }), 0.16, 0.69, 0.05));
-  yacht.add(t);
-  OBST.push({ x0:tx-0.42, x1:tx+0.42, z0:tz-0.42, z1:tz+0.42 });
+  festoon(V3(-X, railTop, SAL.z1 + 0.1), V3(mx, mastY, mz), 1.7);
+  festoon(V3(X, railTop, SAL.z1 + 0.1), V3(-mx, mastY, mz), 1.7);
+  festoon(V3(-mx, mastY, mz), V3(mx, mastY, mz), 0.9);
+  // bow: a tall light mast with dressing lines back to the upper deck and the radar arch
+  const bz = -40, bowY = DECK_Y + 6.5;
+  yacht.add(mesh(new THREE.CylinderGeometry(0.06, 0.1, 6.5, 10), M.metal, 0, DECK_Y + 3.25, bz));
+  bulbAt(0, bowY + 0.12, bz, '#fff1c9', 2.0, 1.2);
+  OBST.push({ x0:-0.12, x1:0.12, z0:bz - 0.12, z1:bz + 0.12 });
+  for (const s of [1, -1]) festoon(V3(s*X, railTop, SAL.z0 - 0.1), V3(0, bowY, bz), 1.2);
+  festoon(V3(0, UP_Y + 3.15, -8.8), V3(0, bowY, bz), 1.0);
+  // upper sun deck: lines from the radar arch to the back corners and across the back
+  for (const s of [1, -1]) festoon(V3(s*3.5, UP_Y + 2.75, -8.8), V3(s*X, railTop, SAL.z1 + 0.1), 0.6);
+  // a lit gateway over the top of the staircase instead of a low line across it
+  const gx = ST.x + 0.45, gz = SAL.z1 + 0.1, gY = UP_Y + 2.7;
+  for (const s of [1, -1]) {
+    yacht.add(mesh(new THREE.CylinderGeometry(0.045, 0.06, gY - UP_Y, 10), M.metal, s*gx, (UP_Y + gY)/2, gz));
+    yacht.add(mesh(new THREE.SphereGeometry(0.08, 10, 8), M.metal, s*gx, gY + 0.02, gz));
+    OBST1.push({ x0:s*gx - 0.08, x1:s*gx + 0.08, z0:gz - 0.3, z1:gz + 0.08 });
+    festoon(V3(s*X, railTop, gz), V3(s*gx, gY, gz), 0.25, 0.6);
+  }
+  const archPts = [];
+  for (let i = 0; i <= 24; i++) { const t = i/24; archPts.push(V3(lerp(-gx, gx, t), gY + Math.sin(t*Math.PI)*0.35, gz)); }
+  yacht.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(archPts), wireM));
+  for (let i = 1; i < 6; i++) { const t = i/6; bulbAt(lerp(-gx, gx, t), gY + Math.sin(t*Math.PI)*0.35 - 0.07, gz, FESTOON[i % FESTOON.length], 1.2, 0.5); }
+  // lanterns on the rail posts, both decks
+  for (let z = 8.6*S; z > -11.75*S + 0.6; z -= 4.0) for (const s of [1, -1]) bulbAt(s*(halfW(z) - 0.12), DECK_Y + 1.02, z, '#ffb867', 0.9, 0.26);
+  for (let z = SAL.z0; z <= SAL.z1 + 0.01; z += 2.5) for (const s of [1, -1]) bulbAt(s*X, railTop + 0.08, z, '#ffb867', 0.9, 0.26);
+  // soft glow strips along the lower deck edge and around the upper deck
+  const edgePts = [];
+  for (let i = 0; i <= 80; i++) { const z = lerp(STERN - 0.2, -11.9*S, i/80); edgePts.push(V3(halfW(z) - 0.22, DECK_Y + 0.03, z)); }
+  for (let i = 80; i >= 0; i--) { const z = lerp(STERN - 0.2, -11.9*S, i/80); edgePts.push(V3(-(halfW(z) - 0.22), DECK_Y + 0.03, z)); }
+  yacht.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edgePts), 800, 0.03, 5), bulbMat('#ffcf9a')));
+  const ux = SAL.x + 0.2, uz0 = SAL.z0 - 0.2, uz1 = SAL.z1 + 0.2;
+  yacht.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V3(-ux, UP_Y - 0.15, uz1), V3(-ux, UP_Y - 0.15, uz0), V3(ux, UP_Y - 0.15, uz0), V3(ux, UP_Y - 0.15, uz1)], false, 'catmullrom', 0), 200, 0.04, 5), bulbMat('#ffcf9a')));
+  // candle lanterns
+  const lanternGlass = new THREE.MeshStandardMaterial({ color: 0xf3ead8, roughness: 0.3, transparent: true, opacity: 0.55 });
+  const lantern = (x, y, z) => {
+    yacht.add(mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.04, 12), M.dark, x, y + 0.02, z));
+    yacht.add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.26, 12, 1, true), lanternGlass, x, y + 0.17, z, false));
+    yacht.add(mesh(new THREE.ConeGeometry(0.12, 0.08, 12), M.dark, x, y + 0.34, z));
+    bulbAt(x, y + 0.15, z, '#ffa94d', 0.9, 0.55);
+  };
+  for (let i = 0; i < 10; i++) { const a = i/10*Math.PI*2 + 0.2; lantern(Math.cos(a)*3.4, DECK_Y, 29 + Math.sin(a)*3.4); }
+  for (const [x, z] of [[-12.4, 19], [12.4, 19], [-7.5, 21], [0, 21], [7.5, 21], [-7.6, -25], [7.6, -25], [0, -27.2], [-10, 33], [10, 26]]) lantern(x, DECK_Y, z);
+  for (const [x, z] of [[-6.9, -1.5], [6.9, -1.5], [0, 0.6], [-6.9, -7], [6.9, -7]]) lantern(x, UP_Y, z);
+  for (const [x, y, z] of [[0, DECK_Y + 3.6, 19], [0, DECK_Y + 3.2, 29], [0, DECK_Y + 3.2, -25], [0, UP_Y + 2.4, -1.5], [11, DECK_Y + 2.6, 30]]) {
+    const L = new THREE.PointLight(0xffc98a, 0, 20, 2); L.position.set(x, y, z); yacht.add(L); lampLights.push(L);
+  }
 }
 
 /* Far scenery: island, sailboat, clouds, gulls */
@@ -929,11 +988,9 @@ class Avatar {
 }
 
 /* ================= Movement helpers ================= */
-function clampWalk(x, z){
-  z = clamp(z, -10.6*S, STERN - 0.4);
-  const hw = Math.max(0.2, halfW(z) - 0.38);
-  x = clamp(x, -hw, hw);
-  for (const b of OBST) {
+// Levels: 0 = lower deck, 1 = upper sun deck, 2 = on the staircase between them.
+function pushOut(x, z, list){
+  for (const b of list) {
     const x0 = b.x0 - 0.18, x1 = b.x1 + 0.18, z0 = b.z0 - 0.18, z1 = b.z1 + 0.18;
     if (x > x0 && x < x1 && z > z0 && z < z1) {
       const dl = x - x0, dr = x1 - x, dtp = z - z0, db = z1 - z, m = Math.min(dl, dr, dtp, db);
@@ -942,24 +999,76 @@ function clampWalk(x, z){
   }
   return [x, z];
 }
+function clamp0(x, z){
+  z = clamp(z, -10.6*S, STERN - 0.4);
+  const hw = Math.max(0.2, halfW(z) - 0.38);
+  return pushOut(clamp(x, -hw, hw), z, OBST);
+}
+function clamp1(x, z){ return pushOut(clamp(x, -UPD.x, UPD.x), clamp(z, UPD.z0, UPD.z1), OBST1); }
+function clampWalk(x, z, l = 0){ return l === 1 ? clamp1(x, z) : clamp0(x, z); }
+// one step from (x,z,l) toward (nx,nz); returns [x, z, l]
+function stepTo(x, z, l, nx, nz){
+  if (l === 0 && Math.abs(nx) < ST.x && nz < ST.zBot + 0.25 && z >= ST.zBot - 0.05) { l = 2; nz = Math.min(nz, ST.zBot - 0.01); }
+  else if (l === 1 && Math.abs(nx) < ST.x && nz > UPD.z1 - 0.05) { l = 2; nz = Math.max(nz, ST.zTop + 0.01); }
+  if (l === 2) {
+    nx = clamp(nx, -ST.x*0.9, ST.x*0.9);
+    if (nz >= ST.zBot) return [nx, ST.zBot + 0.22, 0];
+    if (nz <= ST.zTop) return [nx, ST.zTop - 0.2, 1];
+    return [nx, nz, 2];
+  }
+  const [cx, cz] = clampWalk(nx, nz, l);
+  return [cx, cz, l];
+}
+function segHitsSalon(a, b){
+  for (let i = 1; i < 30; i++) { const t = i/30, x = lerp(a.x, b.x, t), z = lerp(a.z, b.z, t); if (Math.abs(x) < SAL.x + 0.3 && z > SAL.z0 - 0.3 && z < SAL.z1 + 0.3) return true; }
+  return false;
+}
+// lower-deck route that walks around the salon instead of into it
+function route0(a, b){
+  if (!segHitsSalon(a, b)) return [b];
+  const side = p => (Math.abs(p.x) > SAL.x ? Math.sign(p.x) : 0);
+  const region = p => p.z > SAL.z1 ? 'A' : p.z < SAL.z0 ? 'F' : 'S';
+  const X = s => s*(SAL.x + 1.6), zA = SAL.z1 + 1.6, zF = SAL.z0 - 1.6;
+  const ra = region(a), rb = region(b);
+  let s = side(a) || side(b) || (b.x >= 0 ? 1 : -1);
+  const pts = [];
+  if (ra === 'S' && rb === 'S') pts.push({ x: X(side(a) || 1), z: zA }, { x: X(side(b) || 1), z: zA });
+  else {
+    if (ra !== 'S') { const sa = rb === 'S' ? (side(b) || s) : s; pts.push({ x: X(sa), z: ra === 'A' ? zA : zF }); s = sa; }
+    if (rb !== 'S') { const sb = ra === 'S' ? (side(a) || s) : s; pts.push({ x: X(sb), z: rb === 'A' ? zA : zF }); }
+  }
+  pts.push(b);
+  return pts;
+}
+const STAIR_BOT = { x: 0, z: ST.zBot + 0.8 }, STAIR_TOP = { x: 0, z: ST.zTop - 0.8 };
+function planPath(tx, tz, tl){
+  let cur = { x: me.x, z: me.z }, l = me.l, path = [];
+  if (l === 2) { const p = tl === 1 ? STAIR_TOP : STAIR_BOT; path.push(p); cur = p; l = tl === 1 ? 1 : 0; }
+  const t = { x: tx, z: tz };
+  if (l === 0 && tl === 0) path = path.concat(route0(cur, t));
+  else if (l === 0 && tl === 1) path = path.concat(route0(cur, STAIR_BOT), [STAIR_TOP, t]);
+  else if (l === 1 && tl === 1) path.push(t);
+  else path = path.concat([STAIR_TOP, STAIR_BOT], route0(STAIR_BOT, t));
+  me.path = path; me.stuck = 0;
+}
 function seatPose(i){
   const L = LOUNGERS[i];
-  return { x: L.x, z: L.z, ry: L.ry };
+  return { x: L.x, z: L.z, ry: L.ry, l: L.l };
 }
 
 /* ================= Local player & state ================= */
 let entered = false;
-let me = { x: rand(-1.2, 1.2), z: 2.0, ry: Math.PI*0.0, seat: -1, target: null, pendingSeat: -1, stuck: 0, look: null, say: null, emo: null };
+let me = { x: 4, z: 15, l: 0, ry: 0, seat: -1, path: [], pendingSeat: -1, stuck: 0, look: null, say: null, emo: null };
 let myAvatar = null;
 const remotes = new Map();
 let myPeer = null;
 let room = null, roomState = 'wait';
 
 /* ================= Camera ================= */
-const cam = { yaw: 0.6, pitch: 0.3, dist: 50, tYaw: 0.6, tPitch: 0.3, tDist: 50, focus: new THREE.Vector3(0, 2, 1), userTouched: false };
+const cam = { yaw: 0.7, pitch: 0.32, dist: 100, tYaw: 0.7, tPitch: 0.32, tDist: 100, focus: new THREE.Vector3(0, 4, 0), userTouched: false };
 const tmpV = new THREE.Vector3(), lookV = new THREE.Vector3(), focusT = new THREE.Vector3(), probeV = new THREE.Vector3();
 const camLocal = new THREE.Vector3();
-const ROOF = { x: 3.1*S + 0.35, z0: -3.45*S - 0.35, z1: 1.65*S + 0.35, y0: DECK_Y + 2.75 - 0.35, y1: DECK_Y + 2.75 + 0.6 };
+const BLOCK = { x: SAL.x + 0.3, z0: SAL.z0 - 0.3, z1: SAL.z1 + 0.3, y0: DECK_Y, y1: UP_Y + 0.05 };
 function seaView(){
   if (me.seat < 0) return;
   const ry = LOUNGERS[me.seat].ry;
@@ -968,23 +1077,23 @@ function seaView(){
 }
 function updateCamera(dt){
   const k = 1 - Math.exp(-dt*5);
-  if (!entered) { cam.tYaw += dt*0.045; }
+  if (!entered) { cam.tYaw += dt*0.04; }
   cam.yaw = lerp(cam.yaw, cam.tYaw, k);
   cam.pitch = lerp(cam.pitch, cam.tPitch, k);
   cam.dist = lerp(cam.dist, cam.tDist, k);
-  if (!entered) focusT.set(0, 2.8, 0);
+  if (!entered) focusT.set(0, 5, -2);
   else if (me.seat >= 0) {
     const L = LOUNGERS[me.seat]; const fx = Math.sin(L.ry), fz = Math.cos(L.ry);
-    focusT.set(L.x + fx*1.6, DECK_Y + 0.9, L.z + fz*1.6);
-  } else focusT.set(me.x, DECK_Y + 0.9, me.z);
+    focusT.set(L.x + fx*1.6, levelY(L.l) + 0.9, L.z + fz*1.6);
+  } else focusT.set(me.x, levelY(me.l, me.z) + 0.9, me.z);
   cam.focus.lerp(focusT, 1 - Math.exp(-dt*7));
   const cp = Math.cos(cam.pitch);
   tmpV.set(Math.sin(cam.yaw)*cp, Math.sin(cam.pitch), Math.cos(cam.yaw)*cp).multiplyScalar(cam.dist).add(cam.focus);
-  // keep the hardtop roof from coming between the camera and the player
-  if (entered) for (let i = 1; i <= 30; i++) {
-    probeV.lerpVectors(cam.focus, tmpV, i/30);
-    if (Math.abs(probeV.x) < ROOF.x && probeV.z > ROOF.z0 && probeV.z < ROOF.z1 && probeV.y > ROOF.y0 && probeV.y < ROOF.y1) {
-      tmpV.lerpVectors(cam.focus, tmpV, Math.max(0.12, (i - 1.5)/30)); break;
+  // keep the salon block from coming between the camera and the player
+  if (entered) for (let i = 1; i <= 40; i++) {
+    probeV.lerpVectors(cam.focus, tmpV, i/40);
+    if (Math.abs(probeV.x) < BLOCK.x && probeV.z > BLOCK.z0 && probeV.z < BLOCK.z1 && probeV.y > BLOCK.y0 && probeV.y < BLOCK.y1) {
+      tmpV.lerpVectors(cam.focus, tmpV, Math.max(0.1, (i - 1.5)/40)); break;
     }
   }
   camera.position.copy(yacht.localToWorld(tmpV));
@@ -1007,10 +1116,10 @@ canvas.addEventListener('pointermove', e => {
   p.x = e.clientX; p.y = e.clientY;
   if (pointers.size === 1) {
     dragMoved += Math.abs(dx) + Math.abs(dy);
-    if (dragMoved > 6) { cam.tYaw -= dx*0.006; cam.tPitch = clamp(cam.tPitch + dy*0.004, 0.03, 1.25); cam.userTouched = true; }
+    if (dragMoved > 6) { cam.tYaw -= dx*0.006; cam.tPitch = clamp(cam.tPitch + dy*0.004, 0.03, 1.3); cam.userTouched = true; }
   } else if (pointers.size === 2) {
     const [a, b] = [...pointers.values()]; const d = Math.hypot(a.x-b.x, a.y-b.y);
-    if (pinchStart > 0) cam.tDist = clamp(pinchDist*pinchStart/d, 1.6, 60);
+    if (pinchStart > 0) cam.tDist = clamp(pinchDist*pinchStart/d, 1.6, 120);
   }
 });
 function endPointer(e){
@@ -1021,29 +1130,33 @@ function endPointer(e){
 }
 canvas.addEventListener('pointerup', endPointer);
 canvas.addEventListener('pointercancel', endPointer);
-canvas.addEventListener('wheel', e => { e.preventDefault(); cam.tDist = clamp(cam.tDist*(1 + e.deltaY*0.0012), 1.6, 60); }, { passive: false });
+canvas.addEventListener('wheel', e => { e.preventDefault(); cam.tDist = clamp(cam.tDist*(1 + e.deltaY*0.0012), 1.6, 120); }, { passive: false });
 
 const raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2();
 const marker = (() => {
   const m = new THREE.Mesh(new THREE.RingGeometry(0.16, 0.22, 28), new THREE.MeshBasicMaterial({ color: 0xfff3dd, transparent: true, opacity: 0, depthWrite: false }));
   m.rotation.x = -Math.PI/2; yacht.add(m); return m;
 })();
+function showMarker(x, y, z){ marker.position.set(x, y, z); marker.material.opacity = 0.9; }
 function onTap(cx, cy){
   if (!entered) return;
   const r = canvas.getBoundingClientRect();
   ndc.set(((cx - r.left)/r.width)*2 - 1, -((cy - r.top)/r.height)*2 + 1);
   raycaster.setFromCamera(ndc, camera);
-  const hits = raycaster.intersectObjects([deck, ...loungerGroups], true);
+  const hits = raycaster.intersectObjects([deck, upperDeck, stairs, ...loungerGroups], true);
   for (const h of hits) {
     let o = h.object; while (o && !o.userData.kind) o = o.parent;
     if (!o) continue;
-    if (o.userData.kind === 'lounger') { tryLounger(o.userData.idx); return; }
-    if (o.userData.kind === 'deck') {
+    const kind = o.userData.kind;
+    if (kind === 'lounger') { tryLounger(o.userData.idx); return; }
+    if (kind === 'deck' || kind === 'deck1' || kind === 'stairs') {
       const p = yacht.worldToLocal(h.point.clone());
-      const [x, z] = clampWalk(p.x, p.z);
+      let tl = kind === 'deck1' ? 1 : 0, tx = p.x, tz = p.z;
+      if (kind === 'stairs') { tl = 1; tx = STAIR_TOP.x; tz = STAIR_TOP.z; }
+      [tx, tz] = clampWalk(tx, tz, tl);
       if (me.seat >= 0) standUp();
-      me.pendingSeat = -1; me.target = { x, z }; me.stuck = 0;
-      marker.position.set(x, DECK_Y + 0.02, z); marker.material.opacity = 0.9;
+      me.pendingSeat = -1; planPath(tx, tz, tl);
+      showMarker(tx, levelY(tl) + 0.02, tz);
       return;
     }
   }
@@ -1052,21 +1165,25 @@ function occupant(i){
   for (const r of remotes.values()) if (r.seat === i) return r;
   return null;
 }
+function besideLounger(i){
+  const L = LOUNGERS[i];
+  const side = i % 2 === 0 ? -1 : 1;   // step out on the side away from the paired lounger
+  return clampWalk(L.x + side*0.75, L.z, L.l);
+}
 function tryLounger(i){
   if (me.seat === i) { seaView(); return; }
   const occ = occupant(i);
   if (occ) { toast(`${occ.look.n}님이 쉬고 있는 선베드예요`); return; }
   if (me.seat >= 0) standUp();
   const L = LOUNGERS[i];
-  const side = L.x >= 0 ? -1 : 1;
-  const [x, z] = clampWalk(L.x + side*0.75, L.z);
-  me.pendingSeat = i; me.target = { x, z }; me.stuck = 0;
-  marker.position.set(L.x, DECK_Y + 0.45, L.z); marker.material.opacity = 0.9;
+  const [x, z] = besideLounger(i);
+  me.pendingSeat = i; planPath(x, z, L.l);
+  showMarker(L.x, levelY(L.l) + 0.45, L.z);
 }
 function sit(i){
   if (occupant(i)) { toast('방금 다른 분이 먼저 누웠어요'); return; }
-  me.seat = i; me.pendingSeat = -1; me.target = null;
-  const p = seatPose(i); me.x = p.x; me.z = p.z; me.ry = p.ry;
+  me.seat = i; me.pendingSeat = -1; me.path = [];
+  const p = seatPose(i); me.x = p.x; me.z = p.z; me.ry = p.ry; me.l = p.l;
   seaView();
   $('#seatbar').hidden = false;
   fadeHint(); renderCrew();
@@ -1074,15 +1191,14 @@ function sit(i){
 function standUp(){
   if (me.seat < 0) return;
   const L = LOUNGERS[me.seat];
-  const side = L.x >= 0 ? -1 : 1;
-  const [x, z] = clampWalk(L.x + side*0.75, L.z);
-  me.x = x; me.z = z; me.seat = -1;
+  const [x, z] = besideLounger(me.seat);
+  me.x = x; me.z = z; me.l = L.l; me.seat = -1;
   $('#seatbar').hidden = true;
   cam.tDist = 7; cam.tPitch = 0.3; renderCrew();
 }
 function nearestFreeLounger(){
   let best = -1, bd = 3.2;
-  LOUNGERS.forEach((L, i) => { const d = Math.hypot(L.x - me.x, L.z - me.z); if (d < bd && !occupant(i)) { bd = d; best = i; } });
+  LOUNGERS.forEach((L, i) => { if (L.l !== me.l) return; const d = Math.hypot(L.x - me.x, L.z - me.z); if (d < bd && !occupant(i)) { bd = d; best = i; } });
   return best;
 }
 
@@ -1101,6 +1217,7 @@ window.addEventListener('keydown', e => {
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 
+const WALK = 4.0;
 function updateMe(dt){
   let mx = 0, mz = 0;
   if (keys.KeyW || keys.ArrowUp) mz += 1;
@@ -1111,22 +1228,30 @@ function updateMe(dt){
   const px = me.x, pz = me.z;
   if (mx || mz) {
     if (me.seat >= 0) standUp();
-    me.target = null; me.pendingSeat = -1;
+    me.path = []; me.pendingSeat = -1;
     const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw);
     const rx = -fz, rz = fx;
     let dx = fx*mz + rx*mx, dz = fz*mz + rz*mx; const l = Math.hypot(dx, dz); dx /= l; dz /= l;
-    [me.x, me.z] = clampWalk(me.x + dx*3.0*dt, me.z + dz*3.0*dt);
+    [me.x, me.z, me.l] = stepTo(me.x, me.z, me.l, me.x + dx*WALK*dt, me.z + dz*WALK*dt);
     me.ry = me.ry + angDiff(me.ry, Math.atan2(dx, dz))*Math.min(1, dt*12);
     moving = true;
-  } else if (me.target && me.seat < 0) {
-    const dx = me.target.x - me.x, dz = me.target.z - me.z, d = Math.hypot(dx, dz);
-    if (d < 0.06) { me.target = null; if (me.pendingSeat >= 0) sit(me.pendingSeat); }
-    else {
-      const st = Math.min(d, 3.0*dt);
-      const [nx, nz] = clampWalk(me.x + dx/d*st, me.z + dz/d*st);
-      if (Math.hypot(nx - me.x, nz - me.z) < st*0.25) { if ((me.stuck += dt) > 0.4) { me.target = null; if (me.pendingSeat >= 0 && Math.hypot(LOUNGERS[me.pendingSeat].x - me.x, LOUNGERS[me.pendingSeat].z - me.z) < 1.6) sit(me.pendingSeat); else me.pendingSeat = -1; } }
-      else me.stuck = 0;
-      me.x = nx; me.z = nz;
+  } else if (me.path.length && me.seat < 0) {
+    const tgt = me.path[0];
+    const dx = tgt.x - me.x, dz = tgt.z - me.z, d = Math.hypot(dx, dz);
+    if (d < 0.12) {
+      me.path.shift();
+      if (!me.path.length && me.pendingSeat >= 0) sit(me.pendingSeat);
+    } else {
+      const st = Math.min(d, WALK*dt);
+      const [nx, nz, nl] = stepTo(me.x, me.z, me.l, me.x + dx/d*st, me.z + dz/d*st);
+      if (Math.hypot(nx - me.x, nz - me.z) < st*0.25 && nl === me.l) {
+        if ((me.stuck += dt) > 0.5) {
+          const L = me.pendingSeat >= 0 ? LOUNGERS[me.pendingSeat] : null;
+          me.path = [];
+          if (L && L.l === me.l && Math.hypot(L.x - me.x, L.z - me.z) < 1.8) sit(me.pendingSeat); else me.pendingSeat = -1;
+        }
+      } else me.stuck = 0;
+      me.x = nx; me.z = nz; me.l = nl;
       me.ry = me.ry + angDiff(me.ry, Math.atan2(dx, dz))*Math.min(1, dt*10);
       moving = true;
     }
@@ -1134,7 +1259,7 @@ function updateMe(dt){
   if (!myAvatar) return;
   const sp = Math.hypot(me.x - px, me.z - pz)/Math.max(dt, 1e-3);
   myAvatar.speed = lerp(myAvatar.speed, moving ? sp : 0, 0.3);
-  myAvatar.root.position.set(me.x, DECK_Y, me.z);
+  myAvatar.root.position.set(me.x, levelY(me.l, me.z), me.z);
   myAvatar.root.rotation.y = me.ry;
   if (moving && !cam.userTouched) cam.tYaw = cam.tYaw + angDiff(cam.tYaw, me.ry + Math.PI)*Math.min(1, dt*0.8);
 }
@@ -1157,7 +1282,7 @@ function publishFull(){
 }
 function syncPresence(){
   if (!entered) return;
-  const st = { x: r2(me.x), z: r2(me.z), r: r2(((me.ry % (Math.PI*2)) + Math.PI*2) % (Math.PI*2)), s: me.seat };
+  const st = { x: r2(me.x), z: r2(me.z), l: me.l, r: r2(((me.ry % (Math.PI*2)) + Math.PI*2) % (Math.PI*2)), s: me.seat };
   const ch = {}; let any = false;
   for (const k in st) if (st[k] !== lastPub[k]) { ch[k] = st[k]; any = true; }
   if (any) { Object.assign(lastPub, st); pub(ch); }
@@ -1178,15 +1303,15 @@ function onPeers(peers){
     let r = remotes.get(p.peer);
     const look = lookFrom(pr);
     if (!r) {
-      r = { peer: p.peer, look, av: new Avatar(look, false), x: num(pr.x, 0), z: num(pr.z, 2), ry: num(pr.r, 0), seat: -1, sayT: null, emoT: null, pres: null, guest: !!p.guest, mineOther: p.isMe };
-      r.av.root.position.set(r.x, DECK_Y, r.z);
+      r = { peer: p.peer, look, av: new Avatar(look, false), x: num(pr.x, 0), z: num(pr.z, 15), l: [0, 1, 2].includes(pr.l) ? pr.l : 0, ry: num(pr.r, 0), seat: -1, sayT: null, emoT: null, pres: null, guest: !!p.guest, mineOther: p.isMe };
+      r.av.root.position.set(r.x, levelY(r.l, r.z), r.z);
       remotes.set(p.peer, r);
       if (entered) addLog({ sys: `${look.n}님이 승선했어요` });
     }
     if (r.pres === pr) continue;
     r.pres = pr;
     r.look = look; r.av.setLook(look);
-    r.tx = clamp(num(pr.x, r.x), -8, 8); r.tz = clamp(num(pr.z, r.z), -25, 23); r.tr = num(pr.r, r.ry);
+    r.tx = clamp(num(pr.x, r.x), -16, 16); r.tz = clamp(num(pr.z, r.z), -50, 45); r.tr = num(pr.r, r.ry); r.l = [0, 1, 2].includes(pr.l) ? pr.l : 0;
     const s = Math.floor(num(pr.s, -1)); r.seat = (s >= 0 && s < LOUNGERS.length) ? s : -1;
     const say = pr.say;
     if (say && typeof say.m === 'string' && say.t !== r.sayT) {
@@ -1210,16 +1335,19 @@ function onPeers(peers){
 function updateRemotes(dt){
   const k = 1 - Math.exp(-dt*8);
   for (const r of remotes.values()) {
-    let x, z, ry;
-    if (r.seat >= 0) { const p = seatPose(r.seat); x = p.x; z = p.z; ry = p.ry; r.x = x; r.z = z; r.ry = ry; }
+    let x, z, ry, y;
+    if (r.seat >= 0) { const p = seatPose(r.seat); x = p.x; z = p.z; ry = p.ry; r.x = x; r.z = z; r.ry = ry; y = levelY(p.l); }
     else {
       const ox = r.x, oz = r.z;
       r.x = lerp(r.x, r.tx ?? r.x, k); r.z = lerp(r.z, r.tz ?? r.z, k);
       r.ry = r.ry + angDiff(r.ry, r.tr ?? r.ry)*k;
       r.av.speed = lerp(r.av.speed, Math.hypot(r.x - ox, r.z - oz)/Math.max(dt, 1e-3), 0.25);
       x = r.x; z = r.z; ry = r.ry;
+      // a passenger seen jumping between decks snaps instead of sliding through the salon
+      if (r.l !== r.shownL) { if (r.shownL !== undefined && r.l !== 2 && r.shownL !== 2) { r.x = x = r.tx ?? x; r.z = z = r.tz ?? z; } r.shownL = r.l; }
+      y = levelY(r.l, z);
     }
-    r.av.root.position.set(x, DECK_Y, z); r.av.root.rotation.y = ry;
+    r.av.root.position.set(x, y, z); r.av.root.rotation.y = ry;
   }
 }
 function crewCount(){ return remotes.size + (entered ? 1 : 0); }
@@ -1248,15 +1376,15 @@ setInterval(() => { if (logItems.length) renderLog(); }, 10000);
 function renderCrew(){
   const ul = $('#crew'); ul.textContent = '';
   const rows = [];
-  if (entered && me.look) rows.push({ look: me.look, seat: me.seat, mine: true });
-  for (const r of remotes.values()) rows.push({ look: r.look, seat: r.seat, mine: false, other: r.mineOther });
+  if (entered && me.look) rows.push({ look: me.look, seat: me.seat, l: me.l, mine: true });
+  for (const r of remotes.values()) rows.push({ look: r.look, seat: r.seat, l: r.l, mine: false, other: r.mineOther });
   for (const row of rows) {
     const li = document.createElement('li');
     const dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = row.look.c;
     const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = row.look.n;
     li.append(dot, nm);
     if (row.mine || row.other) { const m = document.createElement('span'); m.className = 'me'; m.textContent = row.mine ? '나' : '내 다른 탭'; li.append(m); }
-    const st = document.createElement('span'); st.className = 'st'; st.textContent = row.seat >= 0 ? (row.seat < 6 ? '선미 선베드에서 휴식' : '뱃머리 선베드에서 휴식') : '갑판 산책';
+    const st = document.createElement('span'); st.className = 'st'; st.textContent = row.seat >= 0 ? `${LOUNGERS[row.seat].area} 선베드에서 휴식` : row.l === 1 ? '2층 선데크 산책' : row.l === 2 ? '계단' : '1층 갑판 산책';
     li.append(st); ul.append(li);
   }
   const conn = $('#conn');
@@ -1318,10 +1446,10 @@ $('#entryForm').addEventListener('submit', e => {
   Sound.setVolumes(+$('#volMusic').value/100, +$('#volWaves').value/100);
   entered = true;
   myAvatar = new Avatar(look, true);
-  [me.x, me.z] = clampWalk(pick([-1, 1])*rand(2.6, 4.5), rand(11.8, 12.8));
+  me.l = 0; me.path = []; [me.x, me.z] = clampWalk(pick([-1, 1])*rand(3, 8), rand(13.5, 15.5));
   me.ry = Math.PI*0;
   myAvatar.root.position.set(me.x, DECK_Y, me.z);
-  cam.tYaw = cam.yaw + angDiff(cam.yaw, Math.PI); cam.tDist = 7.5; cam.tPitch = 0.32;
+  cam.tYaw = cam.yaw + angDiff(cam.yaw, 0); cam.tDist = 7.5; cam.tPitch = 0.32;
   $('#entry').classList.add('gone');
   $('#hud').hidden = false;
   setTimeout(() => { $('#entry').hidden = true; }, 1300);
@@ -1504,7 +1632,7 @@ function startRelay(){
     if (emitQueued) return; emitQueued = true;
     setTimeout(() => {
       emitQueued = false;
-      const list = [...peers.entries()].sort((a, b) => a[1].first - b[1].first).slice(0, 14);
+      const list = [...peers.entries()].sort((a, b) => a[1].first - b[1].first).slice(0, 26);
       const arr = list.map(([pid, v]) => ({ peer: pid, presence: v.presence, kind: 'viewer', sameTab: false, isMe: false, guest: false }));
       arr.push({ peer: id, presence: {}, kind: 'viewer', sameTab: true, isMe: true, guest: false });
       onPeers(arr);
@@ -1598,6 +1726,7 @@ function updateEnv(dt){
   M.bulb.color.set('#d8d2c4').lerp(tmpC.set('#ffcf86'), env.lamps);
   for (const b of bulbs) if (b.material !== M.bulb) b.material.color.copy(M.bulb.color);
   for (const g of glowMats) g.m.color.copy(g.day).lerp(g.night, env.lamps);
+  windowM.emissiveIntensity = env.lamps*0.5;
   const tw = 0.85 + Math.sin(U.time.value*1.3)*0.06;
   for (const h of haloMats) h.opacity = env.lamps*tw*0.6;
   sternGlow.material.opacity = env.lamps*0.55;
@@ -1636,7 +1765,7 @@ function frame(now){
   yacht.worldToLocal(camLocal.copy(camera.position));
   for (const o of festoonBulbs) o.visible = o.position.distanceToSquared(camLocal) > 3.2;
   ocean.position.set(Math.round(camera.position.x/4)*4, 0, Math.round(camera.position.z/4)*4);
-  sunLight.position.copy(env.sun).multiplyScalar(60);
+  sunLight.position.copy(env.sun).multiplyScalar(140);
   for (const c of clouds) { c.position.x += c.userData.speed*dt; if (c.position.x > 900) c.position.x = -900; }
   sailboat.position.x -= dt*1.6; if (sailboat.position.x < -700) sailboat.position.x = 700;
   sailboat.position.y = Math.sin(T*0.8)*0.2;
