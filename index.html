@@ -150,8 +150,8 @@ body.zen .top .crew, body.zen .seg, body.zen .bottom, body.zen .seatbar{transiti
     <div class="panel tools">
       <div class="seg" role="group" aria-label="시간대">
         <button type="button" data-tod="day">낮</button>
-        <button type="button" data-tod="sunset" class="on">노을</button>
-        <button type="button" data-tod="night">밤</button>
+        <button type="button" data-tod="sunset">노을</button>
+        <button type="button" data-tod="night" class="on">밤</button>
       </div>
       <button type="button" id="soundBtn" class="icon" aria-expanded="false" aria-controls="soundPop" title="소리">♪</button>
       <button type="button" id="zenBtn" class="icon" title="화면 정리 (H)" aria-pressed="false">◐</button>
@@ -254,8 +254,8 @@ function toEnv(p){
     disc:p.disc, glow:p.glow, sunI:p.sunI, light:p.light, hemiI:p.hemiI, stars:p.stars, lamps:p.lamps, cloudO:p.cloudO };
 }
 const ENVS = { day:toEnv(TOD.day), sunset:toEnv(TOD.sunset), night:toEnv(TOD.night) };
-let envTarget = ENVS.sunset;
-const env = toEnv(TOD.sunset);
+let envTarget = ENVS.night;
+const env = toEnv(TOD.night);
 const COLOR_KEYS = ['top','hor','hor2','sunC','deep','shal','hemiS','hemiG','cloud','gull'];
 const NUM_KEYS = ['disc','glow','sunI','light','hemiI','stars','lamps','cloudO'];
 
@@ -565,6 +565,72 @@ const jacuzzi = (() => {
   OBST.push({ x0:-2.05, x1:2.05, z0:13.95, z1:18.05 });
   return { g, water, bubbles };
 })();
+
+/* Festoon string lights, rail lanterns, deck-edge glow and candle lanterns (they come alive at night) */
+const glowMats = [], haloMats = [], festoonBulbs = [];
+const festoonBulbG = new THREE.SphereGeometry(0.05, 10, 8);
+const bulbMatCache = {}, haloMatCache = {};
+function bulbMat(night){
+  if (!bulbMatCache[night]) { const m = new THREE.MeshBasicMaterial({ color: 0xcfc8b8 }); bulbMatCache[night] = m; glowMats.push({ m, day: new THREE.Color('#cfc8b8'), night: new THREE.Color(night) }); }
+  return bulbMatCache[night];
+}
+function haloMat(night){
+  if (!haloMatCache[night]) { const m = new THREE.SpriteMaterial({ map: glowTex, color: night, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false }); haloMatCache[night] = m; haloMats.push(m); }
+  return haloMatCache[night];
+}
+function bulbAt(x, y, z, night, size = 1, halo = 0.42){
+  const b = new THREE.Mesh(festoonBulbG, bulbMat(night)); b.scale.setScalar(size); b.position.set(x, y, z); yacht.add(b);
+  const h = new THREE.Sprite(haloMat(night)); h.scale.set(halo, halo, 1); h.position.set(x, y, z); h.renderOrder = 5; yacht.add(h);
+  festoonBulbs.push(b, h);
+}
+const FESTOON = ['#ffd58f', '#ffd58f', '#ffb46a', '#ffd58f', '#ff9fbf', '#ffd58f', '#9fe2ff'];
+const wireM = new THREE.LineBasicMaterial({ color: 0x2b2b2b });
+function festoon(a, b, sag, step = 0.7){
+  const pts = [];
+  for (let i = 0; i <= 48; i++) { const t = i/48; const p = new THREE.Vector3().lerpVectors(a, b, t); p.y -= sag*4*t*(1 - t); pts.push(p); }
+  yacht.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wireM));
+  const n = Math.max(2, Math.round(a.distanceTo(b)/step));
+  for (let i = 1; i < n; i++) { const t = i/n; const p = new THREE.Vector3().lerpVectors(a, b, t); bulbAt(p.x, p.y - sag*4*t*(1 - t) - 0.07, p.z, FESTOON[i % FESTOON.length]); }
+}
+{
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  const roofY = DECK_Y + 2.75 - 0.12, rx = 3.1*S - 0.1, rBack = 1.65*S, rFront = -3.45*S;
+  // aft: two stern masts, side runs, a cross over the jacuzzi and one across the stern
+  const mastY = DECK_Y + 3.4, mz = STERN - 1.0, mx = 6.3;
+  const mastG = new THREE.CylinderGeometry(0.05, 0.07, 3.4, 10);
+  for (const s of [1, -1]) { yacht.add(mesh(mastG, M.metal, s*mx, DECK_Y + 1.7, mz)); yacht.add(mesh(new THREE.SphereGeometry(0.08, 10, 8), M.metal, s*mx, mastY + 0.02, mz)); }
+  OBST.push({ x0:mx - 0.1, x1:mx + 0.1, z0:mz - 0.1, z1:mz + 0.1 }, { x0:-mx - 0.1, x1:-mx + 0.1, z0:mz - 0.1, z1:mz + 0.1 });
+  for (const s of [1, -1]) festoon(V(s*rx, roofY, rBack), V(s*mx, mastY, mz), 0.75);
+  festoon(V(-rx, roofY, rBack), V(mx, mastY, mz), 0.95);
+  festoon(V(rx, roofY, rBack), V(-mx, mastY, mz), 0.95);
+  festoon(V(-mx, mastY, mz), V(mx, mastY, mz), 0.55);
+  // bow: a light mast with three dressing lines back to the roof
+  const bz = -10.2*S, bowY = DECK_Y + 4.4;
+  yacht.add(mesh(new THREE.CylinderGeometry(0.05, 0.08, 4.4, 10), M.metal, 0, DECK_Y + 2.2, bz));
+  bulbAt(0, bowY + 0.1, bz, '#fff1c9', 1.6, 0.9);
+  OBST.push({ x0:-0.1, x1:0.1, z0:bz - 0.1, z1:bz + 0.1 });
+  for (const x of [-rx, 0, rx]) festoon(V(x, roofY, rFront), V(0, bowY, bz), x === 0 ? 0.45 : 0.6);
+  // little lanterns on the rail posts
+  for (let z = 8.6*S; z > -11.75*S + 0.6; z -= 3.0) for (const s of [1, -1]) bulbAt(s*(halfW(z) - 0.12), DECK_Y + 0.92, z, '#ffb867', 0.9, 0.26);
+  // soft glow strip along the deck edge
+  const edgePts = [];
+  for (let i = 0; i <= 60; i++) { const z = lerp(STERN - 0.2, -11.9*S, i/60); edgePts.push(V(halfW(z) - 0.22, DECK_Y + 0.03, z)); }
+  for (let i = 60; i >= 0; i--) { const z = lerp(STERN - 0.2, -11.9*S, i/60); edgePts.push(V(-(halfW(z) - 0.22), DECK_Y + 0.03, z)); }
+  yacht.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edgePts), 500, 0.025, 5), bulbMat('#ffcf9a')));
+  // candle lanterns around the jacuzzi and beside the lounger pairs
+  const lanternGlass = new THREE.MeshStandardMaterial({ color: 0xf3ead8, roughness: 0.3, transparent: true, opacity: 0.55 });
+  const lantern = (x, z) => {
+    yacht.add(mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.04, 12), M.dark, x, DECK_Y + 0.02, z));
+    yacht.add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.26, 12, 1, true), lanternGlass, x, DECK_Y + 0.17, z, false));
+    yacht.add(mesh(new THREE.ConeGeometry(0.12, 0.08, 12), M.dark, x, DECK_Y + 0.34, z));
+    bulbAt(x, DECK_Y + 0.15, z, '#ffa94d', 0.9, 0.55);
+  };
+  for (let i = 0; i < 8; i++) { const a = i/8*Math.PI*2 + 0.2; lantern(Math.cos(a)*2.45, 16.0 + Math.sin(a)*2.45); }
+  for (const [x, z] of [[-6.1, 9.5], [6.1, 9.5], [-2.3, 11.0], [2.3, 11.0], [0, -11.2], [-3.8, -13.0], [3.8, -13.0]]) lantern(x, z);
+  for (const [x, y, z] of [[0, DECK_Y + 3.0, 19], [0, DECK_Y + 3.2, -18]]) {
+    const L = new THREE.PointLight(0xffc98a, 0, 16, 2); L.position.set(x, y, z); yacht.add(L); lampLights.push(L);
+  }
+}
 
 /* Loungers & parasols */
 const LOUNGERS = [
@@ -892,6 +958,7 @@ let room = null, roomState = 'wait';
 /* ================= Camera ================= */
 const cam = { yaw: 0.6, pitch: 0.3, dist: 50, tYaw: 0.6, tPitch: 0.3, tDist: 50, focus: new THREE.Vector3(0, 2, 1), userTouched: false };
 const tmpV = new THREE.Vector3(), lookV = new THREE.Vector3(), focusT = new THREE.Vector3(), probeV = new THREE.Vector3();
+const camLocal = new THREE.Vector3();
 const ROOF = { x: 3.1*S + 0.35, z0: -3.45*S - 0.35, z1: 1.65*S + 0.35, y0: DECK_Y + 2.75 - 0.35, y1: DECK_Y + 2.75 + 0.6 };
 function seaView(){
   if (me.seat < 0) return;
@@ -1530,6 +1597,9 @@ function updateEnv(dt){
   for (const L of lampLights) L.intensity = env.lamps*1.25;
   M.bulb.color.set('#d8d2c4').lerp(tmpC.set('#ffcf86'), env.lamps);
   for (const b of bulbs) if (b.material !== M.bulb) b.material.color.copy(M.bulb.color);
+  for (const g of glowMats) g.m.color.copy(g.day).lerp(g.night, env.lamps);
+  const tw = 0.85 + Math.sin(U.time.value*1.3)*0.06;
+  for (const h of haloMats) h.opacity = env.lamps*tw*0.6;
   sternGlow.material.opacity = env.lamps*0.55;
   for (const c of clouds) { c.material.color.copy(env.cloud); c.material.opacity = env.cloudO; }
   gulls.mat.color.copy(env.gull);
@@ -1563,6 +1633,8 @@ function frame(now){
   marker.scale.setScalar(1 + (0.9 - marker.material.opacity)*0.6);
   updateCamera(dt);
   sky.position.copy(camera.position); stars.position.copy(camera.position);
+  yacht.worldToLocal(camLocal.copy(camera.position));
+  for (const o of festoonBulbs) o.visible = o.position.distanceToSquared(camLocal) > 3.2;
   ocean.position.set(Math.round(camera.position.x/4)*4, 0, Math.round(camera.position.z/4)*4);
   sunLight.position.copy(env.sun).multiplyScalar(60);
   for (const c of clouds) { c.position.x += c.userData.speed*dt; if (c.position.x > 900) c.position.x = -900; }
